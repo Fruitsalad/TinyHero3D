@@ -1,0 +1,10 @@
+x Core render engine
+- 3D unlit extension
+- 3D half-lambertian extension
+- extend linear algebra stuff
+  x dot product and things like that
+  - invert matrix
+    - test matrix invert
+- PBR?
+- 2D extension
+- Example
