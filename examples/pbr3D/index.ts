@@ -3,7 +3,7 @@ import {
   initGraphics, Material, Mesh, Model,
   setResizeCallback, Shader, vec3
 } from "../../index";
-import {Camera3D, ModelNode3D, Node3D, SceneTree3D} from "./3D";
+import {Camera3D, ModelNode3D, Node3D, SceneTree3D} from "../../src/extension/3D";
 
 
 const vertex_source = `

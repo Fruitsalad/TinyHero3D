@@ -1,11 +1,9 @@
 import {
-  bindMachine,
-  Drawable, EnvironmentUniforms,
-  InstanceUniforms,
-  Matrix3, Matrix4,
-  Model,
-  Node, SceneTree, Vec3
-} from "../..";
+  bindMachine, Drawable, EnvironmentUniforms, InstanceUniforms,
+  Model, Node, SceneTree
+} from "../graphics/graphics";
+import {Matrix3, Matrix4} from "../math/matrix";
+import {Vec3} from "../math/vec";
 
 const GL = WebGLRenderingContext;
 

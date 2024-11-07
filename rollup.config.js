@@ -7,23 +7,21 @@ import unassert from "rollup-plugin-unassert";
 import { dts } from "rollup-plugin-dts";
 import regexp from "rollup-plugin-regexp"
 
-const name = "render_engine";
 
-export default [
-  // Normal build
-  {
-    input: "./index.ts",
+function create_normal_build(name, input_file) {
+  return {
+    input: input_file,
     output: [
       {
         name,
         format: "umd",
-        file: "lib/render_engine.js",
+        file: `lib/${name}/${name}.js`,
         sourcemap: true
       },
       {
         name,
         format: "es",
-        file: "lib/render_engine.es.js",
+        file: `lib/${name}/${name}.es.js`,
         sourcemap: true
       }
     ],
@@ -31,7 +29,7 @@ export default [
       typescript({
         declaration: true,
         // The current version of rollup doesn't allow this to be any other dir:
-        declarationDir: 'lib/',
+        declarationDir: `lib/${name}/`,
         compilerOptions: {
           sourceMap: true
         }
@@ -39,21 +37,22 @@ export default [
       commonjs(),
       resolve()
     ]
-  },
+  }
+}
 
-  // Minified build
-  {
-    input: "./index.ts",
+function create_minified_build(name, input_file) {
+  return {
+    input: input_file,
     output: [
       {
         name,
         format: "umd",
-        file: "lib/render_engine.min.js"
+        file: `lib/${name}/${name}.min.js`
       },
       {
         name,
         format: "es",
-        file: "lib/render_engine.es.min.js"
+        file: `lib/${name}/${name}.es.min.js`
       }
     ],
     plugins: [
@@ -77,15 +76,32 @@ export default [
         replace: ''
       })
     ]
-  },
+  }
+}
 
-  // Compile the folder of Typescript declaration files into a single file.
-  {
-    input: "./lib/index.d.ts",
+function create_typescript_declaration_files(name, declaration_root) {
+  return {
+    input: declaration_root,
     output: [
-      { file: "lib/render_engine.d.ts", format: "es" },
-      { file: "lib/render_engine.es.d.ts", format: "es" }
+      { file: `lib/${name}/${name}.d.ts`, format: "es" },
+      { file: `lib/${name}/${name}.es.d.ts`, format: "es" }
     ],
-    plugins: [dts()],
-  },
+    plugins: [dts()]
+  };
+}
+
+function bundle(name) {
+  const input_file = `./src/bundles/${name}.ts`;
+  const typescript_root = `./lib/${name}/bundles/${name}.d.ts`;
+  return [
+    create_normal_build(name, input_file),
+    create_minified_build(name, input_file),
+    create_typescript_declaration_files(name, typescript_root)
+  ];
+}
+
+
+export default [
+  ...bundle("core"),
+  ...bundle("bundle3D")
 ]
