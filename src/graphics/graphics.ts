@@ -914,8 +914,9 @@ export class Model implements Drawable {
 // Scene tree
 
 export interface SceneTree {
-  aspectRatio: number
-  uniforms: EnvironmentUniforms
+  aspectRatio: number,
+  uniforms: EnvironmentUniforms,
+  root: Node
 }
 
 export class Node {
@@ -991,62 +992,46 @@ export class Node {
   }
 }
 
-export class Node2D extends Node {
-  public transform: Matrix3;
-
-  public constructor(name?: string) {
-    super(name);
-    this.transform = Matrix3.identity;
-  }
-
-  public getGlobalTransform(): Matrix3 {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let node: Node = this;
-    let tf = this.transform;
-    while (node.parent) {
-      node = node.parent;
-      if (node instanceof Node2D)
-        tf = node.transform.mult(tf);
-    }
-    return tf;
-  }
-}
-
-export class ModelNode2D extends Node2D implements Drawable {
-  public model: Model|null = null;
-  public uniforms: InstanceUniforms;
-
-  public constructor(name?: string) {
-    super(name);
-    this.uniforms = new InstanceUniforms();
-  }
-
-  public static from(model: Model, name?: string): ModelNode2D {
-    const result = new ModelNode2D(name);
-    result.model = model;
-    return result;
-  }
-
-  public draw() {
-    const globalTf = this.getGlobalTransform();
-    this.uniforms.set("local_to_global", GL.FLOAT_MAT3, globalTf);
-    bindMachine.setInstanceUniforms(this.uniforms);
-    this.model?.draw();
-  }
-}
-
-
-
-export function drawTree(node: Node, env: EnvironmentUniforms) {
-  bindMachine.setEnvironment(env);
-  drawBranch(node);
-}
-
-function drawBranch(node: Node) {
-  // @ts-expect-error
-  if (typeof(node.draw) === "function")  // @ts-expect-error
-    node.draw();
-
-  for (const child of node.children)
-    drawBranch(child);
-}
+// export class Node2D extends Node {
+//   public transform: Matrix3;
+//
+//   public constructor(name?: string) {
+//     super(name);
+//     this.transform = Matrix3.identity;
+//   }
+//
+//   public getGlobalTransform(): Matrix3 {
+//     // eslint-disable-next-line @typescript-eslint/no-this-alias
+//     let node: Node = this;
+//     let tf = this.transform;
+//     while (node.parent) {
+//       node = node.parent;
+//       if (node instanceof Node2D)
+//         tf = node.transform.mult(tf);
+//     }
+//     return tf;
+//   }
+// }
+//
+// export class ModelNode2D extends Node2D implements Drawable {
+//   public model: Model|null = null;
+//   public uniforms: InstanceUniforms;
+//
+//   public constructor(name?: string) {
+//     super(name);
+//     this.uniforms = new InstanceUniforms();
+//   }
+//
+//   public static from(model: Model, name?: string): ModelNode2D {
+//     const result = new ModelNode2D(name);
+//     result.model = model;
+//     return result;
+//   }
+//
+//   public draw() {
+//     const globalTf = this.getGlobalTransform();
+//     this.uniforms.set("local_to_global", GL.FLOAT_MAT3, globalTf);
+//     bindMachine.setInstanceUniforms(this.uniforms);
+//     this.model?.draw();
+//   }
+// }

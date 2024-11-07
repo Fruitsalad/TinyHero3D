@@ -1,9 +1,11 @@
 x Core render engine
 - 3D unlit extension
+  x Node3D transformation stuff
+  x SceneTree3D
 - 3D half-lambertian extension
 - extend linear algebra stuff
   x dot product and things like that
-  - invert matrix
+  x invert matrix
     - test matrix invert
 - PBR?
 - 2D extension

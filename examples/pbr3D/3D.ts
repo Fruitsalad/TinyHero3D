@@ -1,6 +1,6 @@
 import {
   bindMachine,
-  Drawable,
+  Drawable, EnvironmentUniforms,
   InstanceUniforms,
   Matrix3, Matrix4,
   Model,
@@ -8,6 +8,42 @@ import {
 } from "../..";
 
 const GL = WebGLRenderingContext;
+
+
+// SceneTree3D
+
+export class SceneTree3D implements SceneTree, Drawable {
+  public aspectRatio: number = 1;
+  public uniforms: EnvironmentUniforms = new EnvironmentUniforms();
+  public root: Node = new Node3D("root");
+
+  public globalToCamera: Matrix4 = Matrix4.identity;
+  public cameraToClip: Matrix4 = Matrix4.identity;
+  public globalToClip: Matrix4 = Matrix4.identity;
+  public camera3D?: Camera3D;
+
+
+  public constructor() {
+    this.uniforms.set("global_to_camera", GL.FLOAT_MAT4, this.globalToCamera);
+    this.uniforms.set("global_to_clip", GL.FLOAT_MAT4, this.globalToClip);
+  }
+
+  public setCameraMatrices(globalToCamera: Matrix4, cameraToClip: Matrix4) {
+    this.globalToCamera = globalToCamera;
+    this.cameraToClip = cameraToClip;
+    this.globalToClip = this.cameraToClip.mult(this.globalToCamera);
+    this.uniforms.set("global_to_camera", GL.FLOAT_MAT4, this.globalToCamera);
+    this.uniforms.set("global_to_clip", GL.FLOAT_MAT4, this.globalToClip);
+  }
+
+  public draw() {
+    bindMachine.setEnvironment(this.uniforms);
+    this.root.recursively(node => {  // @ts-expect-error
+      if (typeof(node.draw) === "function")  // @ts-expect-error
+        node.draw();
+    });
+  };
+}
 
 
 // Node3D
@@ -184,9 +220,9 @@ export class ModelNode3D extends Node3D implements Drawable {
 // Camera3D
 
 interface PerspectiveOptions {
-  fovY: number,
-  near: number,
-  far: number
+  fovY?: number,
+  near?: number,
+  far?: number
 }
 type CameraOptions = PerspectiveOptions;
 
@@ -197,16 +233,20 @@ export class Camera3D extends Node3D {
   oldAspect: number = 1;
   getCameraToClip?: (aspect: number) => Matrix4;
 
-  public static Perspective(opts: PerspectiveOptions): Camera3D {
+  public static Perspective(opts?: PerspectiveOptions): Camera3D {
     const camera = new Camera3D("camera");
     camera.setPerspective(opts);
     return camera;
   }
 
-  public setPerspective(opts: PerspectiveOptions) {
+  public setPerspective(opts?: PerspectiveOptions) {
+    opts ??= {};
+    opts.fovY ??= 70 * Math.PI/180;
+    opts.near ??= 0.1;
+    opts.far ??= 1000;
     this.opts = opts;
     this.setMatrix(
-      a => Matrix4.PerspectiveProjection(opts.fovY, a, opts.near, opts.far)
+      a => Matrix4.PerspectiveProjection(opts.fovY!, a, opts.near!, opts.far!)
     );
   }
 
@@ -242,8 +282,10 @@ export class Camera3D extends Node3D {
     }
 
     // Set the uniforms.
-    const invTF = Matrix4.getInverse3DTransform(this._globalTransform);
-    this.tree.uniforms.set("global_to_camera", GL.FLOAT_MAT4, invTF);
-    this.tree.uniforms.set("camera_to_clip", GL.FLOAT_MAT4, this.cameraToClip);
+    const tree = (this.tree as SceneTree3D);
+    console.assert(typeof tree.setCameraMatrices === "function");
+    const globalToCamera = Matrix4.getInverse3DTransform(this.globalTransform);
+    tree.setCameraMatrices(globalToCamera, this.cameraToClip);
+    tree.camera3D = this;  // Also store the camera.
   }
 }

@@ -1,10 +1,9 @@
 import {
-  drawTree,
   EnvironmentUniforms,
   initGraphics, Material, Mesh, Model,
   setResizeCallback, Shader, vec3
 } from "../../index";
-import {Camera3D, ModelNode3D, Node3D} from "./3D";
+import {Camera3D, ModelNode3D, Node3D, SceneTree3D} from "./3D";
 
 
 const vertex_source = `
@@ -17,16 +16,14 @@ const fragment_source = `
 
 
 const GL = WebGLRenderingContext;
+const targetFramerate = 30;
+let tree = new SceneTree3D();
+let cube: ModelNode3D;
 
 initGraphics($("canvas") as HTMLCanvasElement);
 initScene();
-setResizeCallback(draw);
-draw();
+frame();
 
-
-let tree = new Node3D("root");
-let environment = new EnvironmentUniforms();
-let cube: ModelNode3D;
 
 function $(cssQuery: string): Element|null {
   return document.body.querySelector(cssQuery);
@@ -72,15 +69,21 @@ function initScene() {
   const cube_model = new Model(cube_mesh, material);
   cube = ModelNode3D.from(cube_model, "cube");
 
-  const fovY = 70 * Math.PI/180;
-  const camera = Camera3D.Perspective({fovY, near: 0.1, far: 10000});
+  const camera = Camera3D.Perspective();
   camera.position = vec3(0, 0, 5);
 
-  tree.addChild(cube);
-  tree.addChild(camera);
+  tree.root.addChild(cube);
+  tree.root.addChild(camera);
 }
 
 function draw() {
-  drawTree(tree, environment);
-  // cube.eulerAngles = vec3(time, time/2, time/3);
+  const milliseconds = performance.now();
+  const time = milliseconds/1000;
+  cube.eulerAngles = vec3(time, time/2.5, time/3.3);
+  tree.draw();
+}
+
+function frame() {
+  draw();
+  setTimeout(() => requestAnimationFrame(frame), 1000/targetFramerate)
 }
