@@ -195,19 +195,98 @@ export class Matrix3 extends Matrix<N3> {
 
   // These have to be static because otherwise Matrix<N3> != Matrix3
 
-  public static setTranslation(m: Matrix3, tl: Vec2) {
+  public static setTranslation2D(m: Matrix3, tl: Vec2) {
     m.set2(2, 0, tl.x);
     m.set2(2, 1, tl.y);
   }
 
-  public static setScaleWithoutRotation(m: Matrix3, tl: Vec2) {
-    m.set2(0, 0, tl.x);
-    m.set2(1, 1, tl.y);
-    m.set2(0, 1, 0);
-    m.set2(1, 0, 0);
+  public static deriveScale3D<U>(m: Matrix<U>): Vec3 {
+    const scale = new Vec3(
+      Matrix3.column(m,0).length(),
+      Matrix3.column(m,1).length(),
+      Matrix3.column(m,2).length()
+    );
+    return scale.mult(Math.sign(Matrix3.determinant(m)));
   }
 
-  public static invert(m: Matrix3) {
+  // This uses the YXZ convention (that is: first yaw, then pitch, then roll).
+  public static deriveEulerAngles3D<U>(m: Matrix<U>): Vec3 {
+    const m2 = m.clone();
+    Matrix3.changeToRotationMatrix(m2);
+    return Matrix3._deriveEulerAngles3D(m2);
+  }
+
+  static _deriveEulerAngles3D<U>(m: Matrix<U>): Vec3 {
+    // See https://www.eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf
+    // and also https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
+    // Note that we use the YXZ convention, so the matrix coordinates differ.
+    let x, y, z;
+
+    const mSinX = m.get2(2,1);
+    const E = 0.000001;
+
+    if (mSinX > 1-E) {
+      const mSinYplusZ = m.get2(1,0);
+      const mCosYplusZ = m.get2(1,2);
+      const yPlusZ = Math.atan2(-mSinYplusZ, -mCosYplusZ);
+      x = -Math.PI/2;
+      y = yPlusZ;
+      z = 0;  // Free to choose. We take zero for simplicity.
+    } else if (mSinX < -1+E) {
+      const sinYminusZ = m.get2(1,0);
+      const cosYminusZ = m.get2(1,2);
+      const yMinusZ = Math.atan2(sinYminusZ, cosYminusZ);
+      x = Math.PI/2;
+      y = yMinusZ;
+      z = 0;
+    } else {
+      x = -Math.asin(mSinX);
+      const cosX = Math.cos(x);
+
+      const cosX_cosY = m.get2(2,2);
+      const cosX_sinY = m.get2(2,0);
+      const cosY = cosX_cosY / cosX;
+      const sinY = cosX_sinY / cosX;
+      y = Math.atan2(sinY, cosY);
+
+      const cosX_sinZ = m.get2(0,1);
+      const cosX_cosZ = m.get2(1,1);
+      const cosZ = cosX_cosZ / cosX;
+      const sinZ = cosX_sinZ / cosX;
+      z = Math.atan2(sinZ, cosZ);
+    }
+
+    return new Vec3(x,y,z);
+  }
+
+  public static determinant<U>(m: Matrix<U>) {
+    const cofactors = new Vec3(
+      Matrix3.cofactor(m,1,1, 2,2),
+      Matrix3.cofactor(m,2,1, 0,2),
+      Matrix3.cofactor(m,0,1, 1,2)
+    );
+    return cofactors.dot(Matrix3.row(m, 0));
+  }
+
+  public static orthogonalize<U>(m: Matrix<U>) {
+    let x = Matrix3.column(m, 0);
+    let y = Matrix3.column(m, 1);
+    let z = Matrix3.column(m, 2);
+    x = x.normalized();
+    y = (y .sub (x.mult(x.dot(y)))) .normalized();
+    z = (z .sub (x.mult(x.dot(z))) .sub (y.mult(y.dot(z)))) .normalized();
+    Matrix3.setColumn(m, 0, x);
+    Matrix3.setColumn(m, 1, y);
+    Matrix3.setColumn(m, 2, z);
+  }
+
+  public static changeToRotationMatrix<U>(m: Matrix<U>) {
+    Matrix3.orthogonalize(m);
+    if (Matrix3.determinant(m) < 0)
+      m.scalarMultInPlace(-1);
+  }
+
+  public static getInverse<U>(m: Matrix<U>): Matrix3 {
     // See https://www.geeksforgeeks.org/inverse-of-3x3-matrix/
     // Note that this specific function is also meant to be safe with a Matrix4
     const adjoint = Matrix3.getAdjointMatrix(m);
@@ -221,12 +300,12 @@ export class Matrix3 extends Matrix<N3> {
       "Matrix3.invert was run on a matrix that doesn't have an inverse!"
     );
     adjoint.scalarMultInPlace(inverseDeterminant);
-    m.elems.overwrite_partially(adjoint.elems, 0, 0);
+    return adjoint;
   }
 
-  public static getAdjointMatrix(m: Matrix3): Matrix3 {
+  public static getAdjointMatrix<U>(m: Matrix<U>): Matrix3 {
     // Note that this function is also meant to be safe with a Matrix4
-    const f = Matrix3.co;
+    const f = Matrix3.cofactor;
     return new Matrix3([
       f(m,1,1, 2,2), f(m,1,2, 2,0), f(m,1,0, 2,1),
       f(m,2,1, 0,2), f(m,2,2, 0,0), f(m,2,0, 0,1),
@@ -235,8 +314,33 @@ export class Matrix3 extends Matrix<N3> {
   }
 
   // This calculates a cofactor (which is the determinant of a 2x2 submatrix)
-  static co(m:Matrix3, x1:number, y1:number, x2:number, y2:number): number {
+  static cofactor<U>(
+    m:Matrix<U>, x1:number, y1:number, x2:number, y2:number
+  ): number {
     return m.get2(x1,y1)*m.get2(x2,y2) - m.get2(x2,y1)*m.get2(x1,y2);
+  }
+
+
+  // Rows & columns.
+
+  public static row<U>(m: Matrix<U>, y: number): Vec3 {
+    return new Vec3(m.get2(0,y), m.get2(1,y), m.get2(2,y));
+  }
+
+  public static column<U>(m: Matrix<U>, x: number): Vec3 {
+    return new Vec3(m.get2(x,0), m.get2(x,1), m.get2(x,2));
+  }
+
+  public static setRow<U>(m: Matrix<U>, y: number, column: Vec3) {
+    m.set2(0,y,column.x);
+    m.set2(1,y,column.y);
+    m.set2(2,y,column.z);
+  }
+
+  public static setColumn<U>(m: Matrix<U>, x: number, column: Vec3) {
+    m.set2(x,0,column.x);
+    m.set2(x,1,column.y);
+    m.set2(x,2,column.z);
   }
 }
 
@@ -296,6 +400,24 @@ export class Matrix4 extends Matrix<N4> {
     return result;
   }
 
+  public static PerspectiveProjection(
+    fovY: number, aspect: number, near: number, far: number
+  ): Matrix4 {
+    // Explanation here: https://stackoverflow.com/a/28301213
+    const y = Math.tan((Math.PI-fovY) / 2);
+    const x = y/aspect;
+    const z = (near+far) / (near-far);
+    const w = 2*near*far / (near-far);
+
+    return new Matrix4([
+      x, 0, 0, 0,
+      0, y, 0, 0,
+      0, 0, z, w,
+      0, 0, -1, 0
+    ], false);
+  }
+
+
   public static setTranslation(m: Matrix4, tl: Vec3) {
     m.set2(3, 0, tl.x);
     m.set2(3, 1, tl.y);
@@ -312,11 +434,13 @@ export class Matrix4 extends Matrix<N4> {
     m.set2(2, 2, s.z);
   }
 
-  public static invert3DTransform(m: Matrix4) {
+  public static getInverse3DTransform(m: Matrix4): Matrix4 {
     console.assert(m.get2(3,3) === 1);
-    Matrix3.invert(m as unknown as Matrix3);
+    const inverse_mat3 = Matrix3.getInverse(m);
     const inverse_translation = Matrix4.getTranslation(m).mult(-1);
-    Matrix4.setTranslation(m, inverse_translation);
+    const result = Matrix4.Translate3D(inverse_translation);
+    result.elems.overwrite_partially(inverse_mat3.elems);
+    return result;
   }
 }
 

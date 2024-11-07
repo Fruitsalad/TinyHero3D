@@ -1,12 +1,10 @@
-import {} from "../../lib/render_engine.es";
 import {
   drawTree,
   EnvironmentUniforms,
   initGraphics, Material, Mesh, Model,
-  Node,
-  setResizeCallback, Shader
-} from "../../src";
-import {ModelNode3D, Node3D} from "./3D";
+  setResizeCallback, Shader, vec3
+} from "../../index";
+import {Camera3D, ModelNode3D, Node3D} from "./3D";
 
 
 const vertex_source = `
@@ -28,6 +26,7 @@ draw();
 
 let tree = new Node3D("root");
 let environment = new EnvironmentUniforms();
+let cube: ModelNode3D;
 
 function $(cssQuery: string): Element|null {
   return document.body.querySelector(cssQuery);
@@ -71,10 +70,17 @@ function initScene() {
   const shader = new Shader(vertex_source, fragment_source);
   const material = Material.from(shader);
   const cube_model = new Model(cube_mesh, material);
-  const cube = ModelNode3D.from(cube_model, "cube");
+  cube = ModelNode3D.from(cube_model, "cube");
+
+  const fovY = 70 * Math.PI/180;
+  const camera = Camera3D.Perspective({fovY, near: 0.1, far: 10000});
+  camera.position = vec3(0, 0, 5);
+
   tree.addChild(cube);
+  tree.addChild(camera);
 }
 
 function draw() {
   drawTree(tree, environment);
+  // cube.eulerAngles = vec3(time, time/2, time/3);
 }

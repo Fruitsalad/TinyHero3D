@@ -1,19 +1,22 @@
-import {} from "../../lib/render_engine.es";
 import {
   bindMachine,
   Drawable,
   InstanceUniforms,
   Matrix3, Matrix4,
   Model,
-  Node
-} from "../../src";
+  Node, SceneTree, Vec3
+} from "../..";
 
 const GL = WebGLRenderingContext;
 
 
+// Node3D
+
 export class Node3D extends Node {
   _transform: Matrix4;
   _globalTransform: Matrix4;
+  _cachedEuler: Vec3|null = null;
+  _cachedScale: Vec3|null = null;
 
   public constructor(name?: string) {
     super(name);
@@ -21,36 +24,139 @@ export class Node3D extends Node {
     this._globalTransform = Matrix4.identity;
   }
 
-  public set transform(newValue: Matrix4) {
-    this._transform = newValue;
+  _setParent(node: Node) {
+    super._setParent(node);
     this.afterTransformChanged();
   }
 
-  public getTransformReadOnly(): Matrix4 {
-    return this._transform;
+
+  // Position
+
+  public get position() {
+    return Matrix4.getTranslation(this._transform);
   }
 
-  public getGlobalTransformReadOnly(): Matrix4 {
-    return this._globalTransform;
+  public set position(pos: Vec3) {
+    Matrix4.setTranslation(this._transform, pos);
+  }
+
+  public get globalPosition() {
+    return Matrix4.getTranslation(this._globalTransform);
+  }
+
+  public set globalPosition(pos: Vec3) {
+    const global = this._globalTransform.clone();
+    Matrix4.setTranslation(global, pos);
+    this.globalTransform = global;
+  }
+
+
+  // Rotation
+
+  public get eulerAngles(): Vec3 {
+    if (!this._cachedEuler)
+      this._cachedEuler = Matrix3.deriveEulerAngles3D(this._transform);
+    return this._cachedEuler;
+  }
+
+  public set eulerAngles(euler: Vec3) {
+    this._cachedEuler = euler;
+    this._setTransform(Matrix4.TRS3D(this.position, euler, this.scale));
+  }
+
+  public get globalEulerAngles(): Vec3 {
+    return Matrix3.deriveEulerAngles3D(this._globalTransform);
+  }
+
+  public set globalEulerAngles(euler: Vec3) {
+    const matrix = Matrix4.TRS3D(this.globalPosition, euler, this.globalScale);
+    this._setGlobalTransform(matrix);
+  }
+
+
+  // Scale
+
+  public get scale(): Vec3 {
+    if (!this._cachedScale)
+      this._cachedScale = Matrix3.deriveScale3D(this._transform);
+    return this._cachedScale;
+  }
+
+  public set scale(scale: Vec3) {
+    this._cachedScale = scale;
+    this._setTransform(Matrix4.TRS3D(this.position, this.eulerAngles, scale));
+  }
+
+  public get globalScale(): Vec3 {
+    return Matrix3.deriveScale3D(this._globalTransform);
+  }
+
+  public set globalScale(scale: Vec3) {
+    const matrix =
+      Matrix4.TRS3D(this.globalPosition, this.globalEulerAngles, scale);
+    this._setGlobalTransform(matrix);
+  }
+
+
+  // Transform
+
+  public get transform(): Matrix4 {
+    return this._transform.clone();
+  }
+
+  public set transform(matrix: Matrix4) {
+    this._cachedEuler = null;
+    this._cachedScale = null;
+    this._setTransform(matrix);
+  }
+
+  _setTransform(matrix: Matrix4) {
+    this._transform = matrix;
+    this.afterTransformChanged();
+  }
+
+  public get globalTransform(): Matrix4 {
+    return this._globalTransform.clone();
+  }
+
+  public set globalTransform(matrix: Matrix4) {
+    this._cachedEuler = null;
+    this._cachedScale = null;
+    this._setGlobalTransform(matrix);
+  }
+
+  _setGlobalTransform(matrix: Matrix4) {
+    const parentTF =
+      this.tryGetParentNode3D()?._globalTransform ?? Matrix4.identity;
+    const inverseParentTF = Matrix4.getInverse3DTransform(parentTF);
+    this.transform = inverseParentTF.mult(matrix);
   }
 
   public afterTransformChanged() {
     // Update the global transform.
-    this._globalTransform = this._transform;
-
-    for (let parent = this.parent; !!parent; parent = parent.parent) {
-      if (parent instanceof Node3D) {
-        this._globalTransform = parent._globalTransform.mult(this._transform);
-        break;
-      }
-    }
+    const parent = this.tryGetParentNode3D();
+    this._globalTransform =
+      parent?._globalTransform.mult(this._transform) ?? this._transform;
 
     // Let this node's children update their global transform.
     for (const child of this.children)
       if (child instanceof Node3D)
         child.afterTransformChanged();
   }
+
+
+  // Scene tree
+
+  public tryGetParentNode3D(): Node3D|undefined {
+    for (let node = this.parent; !!node; node = node.parent)
+      if (node instanceof Node3D)
+        return node;
+    return undefined;
+  }
 }
+
+
+// ModelNode3D
 
 export class ModelNode3D extends Node3D implements Drawable {
   public model: Model|null = null;
@@ -68,13 +174,76 @@ export class ModelNode3D extends Node3D implements Drawable {
   }
 
   public draw() {
-    this.uniforms.set("localToGlobal", GL.FLOAT_MAT4, this._globalTransform);
+    this.uniforms.set("local_to_global", GL.FLOAT_MAT4, this._globalTransform);
     bindMachine.setInstanceUniforms(this.uniforms);
     this.model?.draw();
   }
 }
 
+
+// Camera3D
+
+interface PerspectiveOptions {
+  fovY: number,
+  near: number,
+  far: number
+}
+type CameraOptions = PerspectiveOptions;
+
 export class Camera3D extends Node3D {
-  public projection: Matrix4;  // Camera local space to OpenGL's NDC space
-  TODO
+  public cameraToClip = Matrix4.identity;
+  public isActive = true;
+  public opts: CameraOptions|null = null;
+  oldAspect: number = 1;
+  getCameraToClip?: (aspect: number) => Matrix4;
+
+  public static Perspective(opts: PerspectiveOptions): Camera3D {
+    const camera = new Camera3D("camera");
+    camera.setPerspective(opts);
+    return camera;
+  }
+
+  public setPerspective(opts: PerspectiveOptions) {
+    this.opts = opts;
+    this.setMatrix(
+      a => Matrix4.PerspectiveProjection(opts.fovY, a, opts.near, opts.far)
+    );
+  }
+
+  public setMatrix(getCameraToClip: (aspect: number) => Matrix4) {
+    const aspect = this.tree?.aspectRatio ?? 1;
+    this.cameraToClip = getCameraToClip(aspect);
+    this.getCameraToClip = getCameraToClip;
+  }
+
+  public setActive(isActive: boolean) {
+    this.isActive = isActive;
+    this.updateCameraUniforms();
+  }
+
+  public afterTransformChanged() {
+    super.afterTransformChanged();
+    this.updateCameraUniforms();
+  }
+
+  _setTree(tree: SceneTree | null) {
+    super._setTree(tree);
+    this.updateCameraUniforms();
+  }
+
+  public updateCameraUniforms() {
+    if (!this.tree || !this.isActive || !this.getCameraToClip)
+      return;
+
+    // Update the projection if the screen's aspect ratio changed.
+    if (this.tree.aspectRatio !== this.oldAspect) {
+      this.cameraToClip = this.getCameraToClip?.(this.tree.aspectRatio);
+      this.oldAspect = this.tree.aspectRatio;
+    }
+
+    // Set the uniforms.
+    const invTF = Matrix4.getInverse3DTransform(this._globalTransform);
+    this.tree.uniforms.set("global_to_camera", GL.FLOAT_MAT4, invTF);
+    this.tree.uniforms.set("camera_to_clip", GL.FLOAT_MAT4, this.cameraToClip);
+  }
 }

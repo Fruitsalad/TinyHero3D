@@ -12,7 +12,7 @@ const name = "render_engine";
 export default [
   // Normal build
   {
-    input: "src/index.ts",
+    input: "./index.ts",
     output: [
       {
         name,
@@ -43,7 +43,7 @@ export default [
 
   // Minified build
   {
-    input: "src/index.ts",
+    input: "./index.ts",
     output: [
       {
         name,

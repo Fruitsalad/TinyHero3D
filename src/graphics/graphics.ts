@@ -426,8 +426,8 @@ function simpleUniformToArray(value: IntoSimpleUniform): number[] {
 
 function getDefaultValueSourceForName(name: string): ValueSource {
   switch (name) {
-    case "localToGlobal": return ValueSource.INSTANCE;
-    case "globalToView": return ValueSource.ENVIRONMENT;
+    case "local_to_global": return ValueSource.INSTANCE;
+    case "global_to_camera": return ValueSource.ENVIRONMENT;
     default: return ValueSource.MATERIAL;
   }
 }
@@ -913,10 +913,16 @@ export class Model implements Drawable {
 
 // Scene tree
 
+export interface SceneTree {
+  aspectRatio: number
+  uniforms: EnvironmentUniforms
+}
+
 export class Node {
   public name: string;
   public children: Node[];
   public parent: Node|null;
+  public tree: SceneTree|null = null;
 
   public constructor(name?: string) {
     this.name = name ?? "Node";
@@ -924,22 +930,20 @@ export class Node {
     this.parent = null;
   }
 
+
+  // Adding & removing nodes
+
   public addChild(node: Node, index = -1) {
-    if (node.parent) {
+    if (node.tree) {
       throw new Error(
         "Tried to add a new child to a node, " +
-        "but the child already had a parent."
+        "but the child is already in a scene tree."
       );
     }
     this.children.splice(index, 0, node);
-    node.parent = this;
-  }
-
-  public remove() {
-    console.assert(
-      !!this.parent, "Tried to remove a child which already has no parent!"
-    );
-    this.parent!.removeChild(this);
+    node._setParent(this);
+    if (this.tree !== null)
+      node.recursively(node => node._setTree(this.tree));
   }
 
   public removeChild(node: Node) {
@@ -954,6 +958,36 @@ export class Node {
     this.children.splice(found, 1);
     console.assert(!this.children.includes(node), "Child was in list twice?!");
     node.parent = null;
+    node.recursively(node => node._setTree(null));
+  }
+
+  public remove() {
+    console.assert(
+      !!this.parent, "Tried to remove a child which already has no parent!"
+    );
+    this.parent!.removeChild(this);
+  }
+
+
+  // Branch operations
+
+  public recursively(callback: (node: Node) => void) {
+    callback(this);
+    for (const child of this.children)
+      child.recursively(callback);
+  }
+
+
+  // These functions are overridden in some derived classes. For example a
+  // camera might need to update its projection matrix when it's added to a tree
+
+  _setTree(tree: SceneTree|null) {
+    console.assert(this.tree === null || tree === null);
+    this.tree = tree;
+  }
+
+  _setParent(node: Node) {
+    this.parent = node;
   }
 }
 
@@ -995,7 +1029,7 @@ export class ModelNode2D extends Node2D implements Drawable {
 
   public draw() {
     const globalTf = this.getGlobalTransform();
-    this.uniforms.set("localToGlobal", GL.FLOAT_MAT3, globalTf);
+    this.uniforms.set("local_to_global", GL.FLOAT_MAT3, globalTf);
     bindMachine.setInstanceUniforms(this.uniforms);
     this.model?.draw();
   }
