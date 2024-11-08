@@ -8,6 +8,7 @@ export let gl: WebGLRenderingContext;
 export let glVAO: OES_vertex_array_object;
 export let canvas: HTMLCanvasElement;
 export let canvasSize: Vec2 = new Vec2(1, 1);
+export let aspectRatio: number = 1;
 export let bindMachine: BindMachine;
 export let defaultUniformSources = new Map<string, UniformSource>();
 let afterResize: (() => void)|null = null;
@@ -48,6 +49,7 @@ export function initGraphics(
   );
   gl.frontFace(GL.CW);
   gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
+  gl.enable(gl.DEPTH_TEST);
 
   // Create the bind machine.
   bindMachine = new BindMachine();
@@ -67,6 +69,7 @@ export function refreshCanvasSize() {
   canvas.width = canvasSize.x;
   canvas.height = canvasSize.y;
   gl.viewport(0, 0, canvasSize.x, canvasSize.y);
+  aspectRatio = canvasSize.x / canvasSize.y;
   afterResize?.();
 }
 

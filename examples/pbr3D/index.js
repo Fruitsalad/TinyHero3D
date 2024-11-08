@@ -1,6 +1,6 @@
 import {
   gl, initGraphics, Material, Mesh, Model, Shader, vec3,
-  Camera3D, ModelNode3D, SceneTree3D
+  Camera3D, ModelNode3D, SceneTree3D, Matrix4, aspectRatio, setResizeCallback
 } from "../../lib/full/full.es.js";
 
 
@@ -43,6 +43,8 @@ let tree = new SceneTree3D();
 let cube;
 
 initGraphics($("canvas"));
+tree.setAspectRatio(aspectRatio);
+setResizeCallback(() => tree.setAspectRatio(aspectRatio));
 initScene();
 frame();
 
@@ -52,14 +54,16 @@ function $(cssQuery) {
 }
 
 function initScene() {
+  const i = 0.5;
+  const o = -0.5;
   const cube_mesh = Mesh.from(24,
     ["position", GL.FLOAT_VEC3, [
-      1,0,1, 1,1,1, 0,1,1, 0,0,1,  // North face
-      1,0,0, 1,0,1, 1,1,1, 1,1,0,  // East face
-      0,0,0, 0,1,0, 1,1,0, 1,0,0,  // South face
-      0,0,1, 0,1,1, 0,1,0, 0,0,0,  // West face
-      0,1,0, 0,1,1, 1,1,1, 1,1,0,  // Top face
-      0,0,1, 0,0,0, 1,0,0, 1,0,1   // Bottom face
+      i,o,i, i,i,i, o,i,i, o,o,i,  // North face
+      i,o,o, i,o,i, i,i,i, i,i,o,  // East face
+      o,o,o, o,i,o, i,i,o, i,o,o,  // South face
+      o,o,i, o,i,i, o,i,o, o,o,o,  // West face
+      o,i,o, o,i,i, i,i,i, i,i,o,  // Top face
+      o,o,i, o,o,o, i,o,o, i,o,i   // Bottom face
     ]],
     ["normal", GL.FLOAT_VEC3, [
       0,0,1,    0,0,1,    0,0,1,    0,0,1,    // North face
@@ -90,11 +94,10 @@ function initScene() {
   const material = Material.from(shader);
   const cube_model = new Model(cube_mesh, material);
   cube = ModelNode3D.from(cube_model, "cube");
+  tree.root.addChild(cube);
 
   const camera = Camera3D.Perspective();
-  camera.position = vec3(0, 0, 5);
-
-  tree.root.addChild(cube);
+  camera.position = vec3(0, 0, 3);
   tree.root.addChild(camera);
 }
 
@@ -103,7 +106,7 @@ function draw() {
   const time = milliseconds/1000;
   cube.eulerAngles = vec3(time, time/2.5, time/3.3);
   gl.clearColor(1, 0, 0, 1);
-  gl.clear(GL.COLOR_BUFFER_BIT);
+  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
   tree.draw();
   gl.flush();
 }

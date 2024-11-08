@@ -51,6 +51,11 @@ export class SceneTree3D implements SceneTree, Drawable {
     this.uniforms.set("global_to_clip", GL.FLOAT_MAT4, this.globalToClip);
   }
 
+  public setAspectRatio(aspectRatio: number) {
+    this.aspectRatio = aspectRatio;
+    this.camera3D?.updateCameraUniforms();
+  }
+
   public draw() {
     bindMachine.setEnvironment(this.uniforms);
     this.root.recursively(node => {  // @ts-expect-error
@@ -71,8 +76,8 @@ export class Node3D extends Node {
 
   public constructor(name?: string) {
     super(name);
-    this._transform = Matrix4.identity;
-    this._globalTransform = Matrix4.identity;
+    this._transform = Matrix4.identity.clone();
+    this._globalTransform = Matrix4.identity.clone();
   }
 
   _setParent(node: Node) {
@@ -187,7 +192,7 @@ export class Node3D extends Node {
     // Update the global transform.
     const parent = this.tryGetParentNode3D();
     this._globalTransform =
-      parent?._globalTransform.mult(this._transform) ?? this._transform;
+      parent?._globalTransform.mult(this._transform) ?? this._transform.clone();
 
     // Let this node's children update their global transform.
     for (const child of this.children)

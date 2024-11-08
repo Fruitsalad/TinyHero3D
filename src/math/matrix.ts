@@ -351,7 +351,7 @@ export class Matrix4 extends Matrix<N4> {
     0, 1, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1
-  ]);
+  ], false);
 
   public constructor(
     elems: [
@@ -404,7 +404,7 @@ export class Matrix4 extends Matrix<N4> {
     fovY: number, aspect: number, near: number, far: number
   ): Matrix4 {
     // Explanation here: https://stackoverflow.com/a/28301213
-    const y = Math.tan((Math.PI-fovY) / 2);
+    const y = 1.0 / Math.tan(fovY/2);  //Math.tan((Math.PI-fovY) / 2);
     const x = y/aspect;
     const z = (near+far) / (near-far);
     const w = 2*near*far / (near-far);
@@ -412,8 +412,8 @@ export class Matrix4 extends Matrix<N4> {
     return new Matrix4([
       x, 0, 0, 0,
       0, y, 0, 0,
-      0, 0, z, w,
-      0, 0, -1, 0
+      0, 0, z, -1,
+      0, 0, w, 0
     ], false);
   }
 
