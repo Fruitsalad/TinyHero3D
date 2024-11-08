@@ -87,7 +87,7 @@ export class Vec<T> {
   }
 
   public square_length(): number {
-    return this.elems.reduce((sum, n) => sum + n*n);
+    return this.elems.reduce((sum, n) => sum + n*n, 0);
   }
   public length(): number {
     return Math.sqrt(this.square_length());

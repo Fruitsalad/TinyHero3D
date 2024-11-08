@@ -41,6 +41,8 @@ const GL = WebGLRenderingContext;
 const targetFramerate = 30;
 let tree = new SceneTree3D();
 let cube;
+let cube2;
+let cube3;
 
 initGraphics($("canvas"));
 tree.setAspectRatio(aspectRatio);
@@ -93,18 +95,39 @@ function initScene() {
   const shader = new Shader(vertex_source, fragment_source);
   const material = Material.from(shader);
   const cube_model = new Model(cube_mesh, material);
-  cube = ModelNode3D.from(cube_model, "cube");
-  tree.root.addChild(cube);
 
   const camera = Camera3D.Perspective();
   camera.position = vec3(0, 0, 3);
   tree.root.addChild(camera);
+
+  // cube = ModelNode3D.from(cube_model, "cube");
+  // tree.root.addChild(cube);
+
+  cube2 = ModelNode3D.from(cube_model, "cube2");
+  cube2.eulerAngles = vec3(0, -Math.PI/4, Math.PI/4);
+  cube2.position = vec3(2, 0, -3);
+  cube2.scale = vec3(1.1);
+  tree.root.addChild(cube2);
+
+  // cube3 = ModelNode3D.from(cube_model, "cube3");
+  // cube3.position = vec3(1);
+  // cube3.scale = vec3(0.3);
+  // cube.addChild(cube3);
 }
 
 function draw() {
   const milliseconds = performance.now();
   const time = milliseconds/1000;
-  cube.eulerAngles = vec3(time, time/2.5, time/3.3);
+  const t = Math.sin(time)*0.5 + 0.5;
+  // cube.eulerAngles = vec3(time/2, time/5, time/9);
+  // cube.scale = vec3(0.8 + (1-t)*0.2);
+  // const old = cube2.eulerAngles;
+  // old.y = time/2;
+  cube2.scale = vec3(1); //vec3(0.5 + t*0.5);
+  // cube2.eulerAngles = old;
+  cube2.globalPosition = vec3(0); // vec3(t*5 - 2.5, 0.5, 0);
+  // cube3.eulerAngles = vec3(time/8, time/7, time/6);
+
   gl.clearColor(1, 0, 0, 1);
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
   tree.draw();

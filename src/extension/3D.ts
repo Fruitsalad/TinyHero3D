@@ -94,6 +94,7 @@ export class Node3D extends Node {
 
   public set position(pos: Vec3) {
     Matrix4.setTranslation(this._transform, pos);
+    this.afterTransformChanged();
   }
 
   public get globalPosition() {
