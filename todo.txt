@@ -2,6 +2,7 @@ x Core render engine
 - 3D unlit extension
   x Node3D transformation stuff
   x SceneTree3D
+  - gltf import? Or obj?
 - 3D half-lambertian extension
 - extend linear algebra stuff
   x dot product and things like that
