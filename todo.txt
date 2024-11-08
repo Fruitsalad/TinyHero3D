@@ -10,3 +10,4 @@ x Core render engine
 - PBR?
 - 2D extension
 - Example
+- remove indices from vertex buffer

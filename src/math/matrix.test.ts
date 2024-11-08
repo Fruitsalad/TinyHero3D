@@ -1,5 +1,5 @@
-import {Vec2, Vec2Tuple, vec3} from "./vec";
-import {Matrix3} from "./matrix";
+import {Vec2, Vec2Tuple, vec3} from "./vec.ts";
+import {Matrix3} from "./matrix.ts";
 
 describe('Matrix3', () => {
   test('from & transform', () => {
@@ -12,7 +12,8 @@ describe('Matrix3', () => {
       translate: Vec2Tuple, scale: Vec2Tuple,
       input: Vec2Tuple, expected: Vec2Tuple
     ) {
-      const matrix = Matrix3.from(Vec2.from(translate), Vec2.from(scale));
+      const matrix =
+        Matrix3.TranslateScale2D(Vec2.from(translate), Vec2.from(scale));
       const actual = matrix.transform(vec3(Vec2.from(input), 1));
       expect(actual.x).toBe(expected[0]);
       expect(actual.y).toBe(expected[1]);

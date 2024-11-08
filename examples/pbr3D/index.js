@@ -1,16 +1,38 @@
 import {
-  EnvironmentUniforms,
-  initGraphics, Material, Mesh, Model,
-  setResizeCallback, Shader, vec3
-} from "../../index";
-import {Camera3D, ModelNode3D, Node3D, SceneTree3D} from "../../src/extension/3D";
+  gl, initGraphics, Material, Mesh, Model, Shader, vec3,
+  Camera3D, ModelNode3D, SceneTree3D
+} from "../../lib/full/full.es.js";
 
 
 const vertex_source = `
+attribute vec3 position;
+attribute vec3 normal;
+attribute vec2 uv;
 
+uniform mat4 local_to_clip;
+
+varying vec2 _uv;
+varying vec3 _normal;
+
+void main() {
+  _uv = uv;
+  _normal = normal;
+  gl_Position = local_to_clip * vec4(position, 1.0);
+}
 `;
 const fragment_source = `
+precision highp float;
 
+varying vec2 _uv;
+varying vec3 _normal;
+
+void main() {
+  float ndotl = max(dot(_normal, vec3(1,0,0)), 0.0);
+  vec3 dark_color = vec3(0.3, 0.1, 0.1);
+  vec3 bright_color = vec3(1, 0.4, 0.4);
+  vec3 color = dark_color + ndotl * (bright_color-dark_color);
+  gl_FragColor = vec4(color, 1);
+}
 `;
 
 
@@ -18,14 +40,14 @@ const fragment_source = `
 const GL = WebGLRenderingContext;
 const targetFramerate = 30;
 let tree = new SceneTree3D();
-let cube: ModelNode3D;
+let cube;
 
-initGraphics($("canvas") as HTMLCanvasElement);
+initGraphics($("canvas"));
 initScene();
 frame();
 
 
-function $(cssQuery: string): Element|null {
+function $(cssQuery) {
   return document.body.querySelector(cssQuery);
 }
 
@@ -80,7 +102,10 @@ function draw() {
   const milliseconds = performance.now();
   const time = milliseconds/1000;
   cube.eulerAngles = vec3(time, time/2.5, time/3.3);
+  gl.clearColor(1, 0, 0, 1);
+  gl.clear(GL.COLOR_BUFFER_BIT);
   tree.draw();
+  gl.flush();
 }
 
 function frame() {

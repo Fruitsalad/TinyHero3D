@@ -9,6 +9,7 @@ export let glVAO: OES_vertex_array_object;
 export let canvas: HTMLCanvasElement;
 export let canvasSize: Vec2 = new Vec2(1, 1);
 export let bindMachine: BindMachine;
+export let defaultUniformSources = new Map<string, UniformSource>();
 let afterResize: (() => void)|null = null;
 
 
@@ -37,7 +38,14 @@ export function initGraphics(
   }
 
   // Configure some stuff.
-  glVAO = gl.getExtension("OESVertexArrayObject")!;
+  // console.log(gl.getSupportedExtensions());
+  glVAO = gl.getExtension("OES_vertex_array_object")!;
+  console.assert(
+    !!glVAO,
+    "Could not load the necessary GL extension OES_vertex_array_object. " +
+    "This extension *should* be available on all browsers, but apparently it " +
+    "isn't available on yours."
+  );
   gl.frontFace(GL.CW);
   gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
 
@@ -256,7 +264,19 @@ export class VertexBuffer {
     type: GlType,
     isNormalized: boolean
   ) {
-    console.assert(type.elemType === GL.INT || type.elemType === GL.FLOAT);
+    console.assert(
+      bufferType !== GL.ARRAY_BUFFER ||
+      type.elemType === GL.INT || type.elemType === GL.FLOAT,
+      "Vertex buffers are only allowed to have `int` or `float` elements in " +
+      "WebGL 1."
+    );
+    console.assert(
+      bufferType !== GL.ELEMENT_ARRAY_BUFFER ||
+      type.elemType === GL.UNSIGNED_SHORT,
+      "Index buffers are only allowed to have the type `unsigned short` in " +
+      "this rendering engine (WebGL also supports `byte` i.e. " +
+      "`unsigned char`, but this rendering engine does not. Sorry!)"
+    );
     this.buffer = buffer;
     this.bufferType = bufferType;
     this.type = type;
@@ -359,7 +379,7 @@ type IntoUniform = IntoSimpleUniform | Texture;
 type UniformValue = number[] | Texture;
 type IntoUniformWithValueTuple = [string, GLenum, IntoUniform, number?];
 
-export enum ValueSource { MATERIAL, ENVIRONMENT, INSTANCE }
+export enum UniformSource { MATERIAL, ENVIRONMENT, INSTANCE }
 
 interface Uniform {
   name: string;
@@ -372,7 +392,7 @@ interface UniformWithValue extends Uniform {
 
 interface MaterialUniform extends UniformWithValue {
   location: WebGLUniformLocation;
-  valueSource: ValueSource;
+  valueSource: UniformSource;
   // This is to help find spelling errors in uniforms:
   hasBeenWritten: boolean;
 }
@@ -424,12 +444,11 @@ function simpleUniformToArray(value: IntoSimpleUniform): number[] {
   return value.elems;
 }
 
-function getDefaultValueSourceForName(name: string): ValueSource {
-  switch (name) {
-    case "local_to_global": return ValueSource.INSTANCE;
-    case "global_to_camera": return ValueSource.ENVIRONMENT;
-    default: return ValueSource.MATERIAL;
-  }
+export function addDefaultUniformSources(
+  ...sources: [string, UniformSource][]
+) {
+  for (const [name, source] of sources)
+    defaultUniformSources.set(name, source);
 }
 
 
@@ -520,7 +539,8 @@ export class Material {
       for (let i = 1; i < uniform.type.elemCount; i++)
         value.push(0);
 
-      const valueSource = getDefaultValueSourceForName(uniform.name);
+      const valueSource =
+        defaultUniformSources.get(uniform.name) ?? UniformSource.MATERIAL;
       map.set(uniform.name, {
         ...uniform, value, location, valueSource, hasBeenWritten: false
       });
@@ -547,7 +567,7 @@ export class Material {
     const newUniform = {
       ...uniform,
       value: UniformValue(value),
-      valueSource: ValueSource.MATERIAL,
+      valueSource: UniformSource.MATERIAL,
       hasBeenWritten: true
     };
     validateUniformWithValue(newUniform);
@@ -555,7 +575,7 @@ export class Material {
     this.hasChangedSinceLastBound = true;
   }
 
-  public setUniformSource(name: string, source: ValueSource) {
+  public setUniformSource(name: string, source: UniformSource) {
     const uniform = this.uniforms.get(name);
     if (uniform === undefined) {
       console.warn(`Uniform “${name}” does not exist (it might not be active)`);
@@ -567,6 +587,10 @@ export class Material {
       hasBeenWritten: true
     });
     this.hasChangedSinceLastBound = true;
+  }
+
+  public hasUniform(name: string): boolean {
+    return this.uniforms.has(name);
   }
 }
 
@@ -727,7 +751,7 @@ export class BindMachine {
       if (!this.wereInstanceUniformsChanged || !this.instanceUniforms)
         return;
       for (const [_, uniform] of material.uniforms) {
-        if (uniform.valueSource !== ValueSource.INSTANCE)
+        if (uniform.valueSource !== UniformSource.INSTANCE)
           continue;
         console.assert(uniform.type.type !== GL.SAMPLER_2D);
         const value = this.instanceUniforms.tryGet(uniform) ?? uniform.value;
@@ -763,9 +787,9 @@ export class BindMachine {
     instanceUniforms: InstanceUniforms|null
   ): UniformValue {
     switch (uniform.valueSource) {
-      case ValueSource.ENVIRONMENT:
+      case UniformSource.ENVIRONMENT:
         return environment.tryGet(uniform) ?? uniform.value;
-      case ValueSource.INSTANCE:
+      case UniformSource.INSTANCE:
         console.assert(
           uniform.type.type !== GL.SAMPLER_2D,
           "Textures are not supported as instance uniform."
@@ -788,8 +812,8 @@ export class BindMachine {
   _setShader(shader: Shader) {
     if (this.shader === shader)
       return;
-    gl.useProgram(shader.program);
     this.shader = shader;
+    gl.useProgram(shader.program);
   }
 
   _bindSimpleUniform(uniform: MaterialUniform, value: number[]) {
@@ -827,7 +851,6 @@ export class BindMachine {
   public setMeshWithoutVao(mesh: Mesh) {
     if (this.mesh === mesh)
       return;
-    this.mesh = mesh;
     this.vao = null;
     glVAO.bindVertexArrayOES(null);
     this._setMesh(mesh);
@@ -837,6 +860,7 @@ export class BindMachine {
     console.assert(
       !!this.shader, "Must have a shader bound before binding a mesh."
     );
+    this.mesh = mesh;
 
     for (const [name, attrib] of this.shader!.vertexAttributes.entries()) {
       const buffer = mesh.buffers.get(name);
@@ -846,19 +870,18 @@ export class BindMachine {
       }
       console.assert(attrib.type.type === buffer.type.type);
       console.assert(attrib.type.size === buffer.type.size);
-
-      if (buffer.bufferType === GL.ELEMENT_ARRAY_BUFFER) {
-        gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffer.buffer);
-      } else {
-        console.assert(buffer.bufferType === GL.ARRAY_BUFFER);
-        gl.enableVertexAttribArray(attrib.location);
-        gl.bindBuffer(buffer.bufferType, buffer.buffer);
-        gl.vertexAttribPointer(
-          attrib.location, attrib.type.elemCount, attrib.type.elemType,
-          buffer.isNormalized, 0, 0
-        );
-      }
+      console.assert(buffer.bufferType === GL.ARRAY_BUFFER);
+      gl.enableVertexAttribArray(attrib.location);
+      gl.bindBuffer(buffer.bufferType, buffer.buffer);
+      gl.vertexAttribPointer(
+        attrib.location, attrib.type.elemCount, attrib.type.elemType,
+        buffer.isNormalized, 0, 0
+      );
     }
+
+    const indices = this.mesh.buffers.get("indices");
+    if (indices && indices.bufferType === GL.ELEMENT_ARRAY_BUFFER)
+      gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indices.buffer);
   }
 
 

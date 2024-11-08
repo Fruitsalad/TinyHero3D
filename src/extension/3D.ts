@@ -1,6 +1,13 @@
 import {
-  bindMachine, Drawable, EnvironmentUniforms, InstanceUniforms,
-  Model, Node, SceneTree
+  bindMachine,
+  Drawable,
+  EnvironmentUniforms,
+  InstanceUniforms,
+  Model,
+  Node,
+  SceneTree,
+  addDefaultUniformSources,
+  UniformSource
 } from "../graphics/graphics";
 import {Matrix3, Matrix4} from "../math/matrix";
 import {Vec3} from "../math/vec";
@@ -22,7 +29,16 @@ export class SceneTree3D implements SceneTree, Drawable {
 
 
   public constructor() {
+    this.root.tree = this;
+    addDefaultUniformSources(
+      ["local_to_global", UniformSource.INSTANCE],
+      ["local_to_clip", UniformSource.INSTANCE],
+      ["global_to_camera", UniformSource.ENVIRONMENT],
+      ["camera_to_clip", UniformSource.ENVIRONMENT],
+      ["global_to_clip", UniformSource.ENVIRONMENT]
+    );
     this.uniforms.set("global_to_camera", GL.FLOAT_MAT4, this.globalToCamera);
+    this.uniforms.set("camera_to_clip", GL.FLOAT_MAT4, this.cameraToClip);
     this.uniforms.set("global_to_clip", GL.FLOAT_MAT4, this.globalToClip);
   }
 
@@ -31,6 +47,7 @@ export class SceneTree3D implements SceneTree, Drawable {
     this.cameraToClip = cameraToClip;
     this.globalToClip = this.cameraToClip.mult(this.globalToCamera);
     this.uniforms.set("global_to_camera", GL.FLOAT_MAT4, this.globalToCamera);
+    this.uniforms.set("camera_to_clip", GL.FLOAT_MAT4, this.cameraToClip);
     this.uniforms.set("global_to_clip", GL.FLOAT_MAT4, this.globalToClip);
   }
 
@@ -208,9 +225,16 @@ export class ModelNode3D extends Node3D implements Drawable {
   }
 
   public draw() {
-    this.uniforms.set("local_to_global", GL.FLOAT_MAT4, this._globalTransform);
+    if (!this.model)
+      return;
+
+    const tree = this.tree! as SceneTree3D;
+    const localToGlobal = this._globalTransform;
+    const localToClip = tree.globalToClip.mult(localToGlobal);
+    this.uniforms.set("local_to_global", GL.FLOAT_MAT4, localToGlobal);
+    this.uniforms.set("local_to_clip", GL.FLOAT_MAT4, localToClip);
     bindMachine.setInstanceUniforms(this.uniforms);
-    this.model?.draw();
+    this.model.draw();
   }
 }
 
