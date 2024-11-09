@@ -3,11 +3,11 @@ import {
   Drawable,
   EnvironmentUniforms,
   InstanceUniforms,
-  Model,
+  Submesh,
   Node,
   SceneTree,
   addDefaultUniformSources,
-  UniformSource
+  UniformSource, Mesh
 } from "../graphics/graphics";
 import {Matrix3, Matrix4} from "../math/matrix";
 import {Vec3} from "../math/vec";
@@ -213,10 +213,10 @@ export class Node3D extends Node {
 }
 
 
-// ModelNode3D
+// MeshNode3D
 
-export class ModelNode3D extends Node3D implements Drawable {
-  public model: Model|null = null;
+export class MeshNode3D extends Node3D implements Drawable {
+  public mesh: Mesh|null = null;
   public uniforms: InstanceUniforms;
 
   public constructor(name?: string) {
@@ -224,14 +224,14 @@ export class ModelNode3D extends Node3D implements Drawable {
     this.uniforms = new InstanceUniforms();
   }
 
-  public static from(model: Model, name?: string): ModelNode3D {
-    const result = new ModelNode3D(name);
-    result.model = model;
+  public static from(mesh: Mesh, name?: string): MeshNode3D {
+    const result = new MeshNode3D(name);
+    result.mesh = mesh;
     return result;
   }
 
   public draw() {
-    if (!this.model)
+    if (!this.mesh)
       return;
 
     const tree = this.tree! as SceneTree3D;
@@ -240,7 +240,7 @@ export class ModelNode3D extends Node3D implements Drawable {
     this.uniforms.set("local_to_global", GL.FLOAT_MAT4, localToGlobal);
     this.uniforms.set("local_to_clip", GL.FLOAT_MAT4, localToClip);
     bindMachine.setInstanceUniforms(this.uniforms);
-    this.model.draw();
+    this.mesh.draw();
   }
 }
 

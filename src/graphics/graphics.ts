@@ -95,9 +95,9 @@ export function getElemTypeAndCount(
 ): [GLenum, number] {
   const elementCount = getElementCountOfGlType(type);
   const isMiscSupportedType =
-    (type === GL.UNSIGNED_INT
-    || type === GL.UNSIGNED_SHORT
-    || type === GL.UNSIGNED_BYTE
+    (type === GL.UNSIGNED_SHORT
+    // || type === GL.UNSIGNED_INT
+    // || type === GL.UNSIGNED_BYTE
     || type === GL.SAMPLER_2D);
   const elemType =
     isSupportedFloatType(type) ? GL.FLOAT :
@@ -140,14 +140,23 @@ function isSupportedIntType(type: GLenum): boolean {
 
 // GlType
 
-interface GlType {
-  type: GLenum;
+export interface GlType {
+  type: GLenum;  // Something like FLOAT_VEC3
+  // `size` is almost always `1`, except for arrays (somewhat rare). Please note
+  // that this does not contain the amount of vertices of a vertex buffer (the
+  // length of a vertex buffer is not actually stored anywhere).
   size: number;
-  elemType: GLenum;  // The type of the values (INT, FLOAT or SAMPLER2D).
-  elemCount: number;  // The amount of values in the type.
+  // `elemType` indicates the type of the individual values.
+  // It can be one of the following: INT, FLOAT, UNSIGNED_SHORT or SAMPLER2D.
+  // Please note that only INT, FLOAT and SAMPLER2D are supported in uniforms
+  // and only INT and FLOAT are supported in vertex buffers.
+  // For index buffers, only UNSIGNED_SHORT is supported.
+  elemType: GLenum;
+  // The amount of values in the type. For an array of two vec3s, this is `6`.
+  elemCount: number;
 }
 
-function GlType(type: GLenum, size = 1): GlType {
+export function GlType(type: GLenum, size = 1): GlType {
   const [elemType, elemCount] = getElemTypeAndCount(type, size);
   return { type, size, elemType, elemCount };
 }
@@ -598,89 +607,95 @@ export class Material {
 }
 
 
-// Mesh
+// Geometry
 
-type IntoMeshBuffer = [string, GLenum, IntoBufferData]
+type IntoNamedVertexBuffer = [string, GLenum, IntoBufferData]
 
-export class Mesh {
-  public buffers: Map<string, VertexBuffer>;
+export class Geometry {
+  public vertexBuffers: Map<string, VertexBuffer>;
   public vertexCount: number;
+  public indexBuffer?: VertexBuffer;
   public indexCount?: number;
 
   public constructor(
-    vertexCount: number, buffers: [string, VertexBuffer][], indexCount?: number
+    vertexCount: number, vertexBuffers: [string, VertexBuffer][],
+    indexCount?: number, indexBuffer?: VertexBuffer
   ) {
     this.vertexCount = vertexCount;
     this.indexCount = indexCount;
-    this.buffers = new Map<string, VertexBuffer>();
+    this.vertexBuffers = new Map<string, VertexBuffer>();
 
-    let wereIndicesFound = false;
-    for (const [name, buffer] of buffers) {
-      this.buffers.set(name, buffer);
-
-      if (buffer.bufferType === GL.ELEMENT_ARRAY_BUFFER) {
-        console.assert(
-          typeof(indexCount) === "number",
-          "In the Mesh constructor, an index buffer was found, but the index " +
-          "count wasn't provided! You should provide the index count as an " +
-          "argument to the constructor."
-        );
-        console.assert(
-          !wereIndicesFound,
-          "A mesh can only have a single index buffer, " +
-          "but a second index buffer was provided!"
-        );
-        wereIndicesFound = true;
-      }
+    if (indexBuffer) {
+      console.assert(
+        typeof(indexCount) === "number",
+        "In the Geometry constructor, an index buffer was provided," +
+        "but the index count wasn't provided! You should provide the index " +
+        "count as an argument to the constructor."
+      );
+      this.indexBuffer = indexBuffer;
     }
 
-    console.assert(
-      (typeof(indexCount) === "number") === wereIndicesFound,
-      "In the Mesh constructor, the index count was provided, but no index " +
-      "buffer was found! Did you forget to mark a buffer as an index buffer?"
-    )
+    for (const [name, buffer] of vertexBuffers) {
+      console.assert(
+        !this.vertexBuffers.has(name),
+        `A submesh had two buffers with the name “${name}”! ` +
+        "Vertex buffer names must be unique!"
+      );
+      console.assert(
+        buffer.bufferType === GL.ARRAY_BUFFER,
+        `The vertex buffer “${name}” did not have the buffer type ` +
+        "ARRAY_BUFFER. Did you accidentally pass in an index buffer?"
+      );
+      this.vertexBuffers.set(name, buffer);
+    }
   }
 
   public static from(
-    vertexCount: number, ...buffers: IntoMeshBuffer[]
-  ): Mesh {
-    return Mesh.from_indexed(vertexCount, undefined, ...buffers);
+    vertexCount: number, ...vertexBuffers: IntoNamedVertexBuffer[]
+  ): Geometry {
+    const buffers = Geometry.createNamedBuffers(vertexCount, vertexBuffers);
+    return new Geometry(vertexCount, buffers);
   }
 
   public static from_indexed(
     vertexCount: number,
-    indexCount: number|undefined,
-    ...buffers: IntoMeshBuffer[]
-  ): Mesh {
-    const buffers2: [string, VertexBuffer][] = [];
+    indices: number[],
+    ...vertexBuffers: IntoNamedVertexBuffer[]
+  ): Geometry {
+    const indexBuffer = VertexBuffer.from({
+      data: indices, type: GlType(GL.UNSIGNED_SHORT), isIndices: true
+    });
+    const buffers = Geometry.createNamedBuffers(vertexCount, vertexBuffers);
+    return new Geometry(vertexCount, buffers, indices.length, indexBuffer);
+  }
+
+  public static createNamedBuffers(
+    vertexCount: number, buffers: IntoNamedVertexBuffer[]
+  ): [string, VertexBuffer][] {
+    const result: [string, VertexBuffer][] = [];
 
     for (const [name, type, data] of buffers) {
-      const isIndices = (name === "indices");
-      const normalized =
-        VertexBuffer.normalizeIntoBuffer([type, data, isIndices]);
+      const normalized = VertexBuffer.normalizeIntoBuffer([type, data]);
 
       if (Array.isArray(normalized.data)) {
-        if (isIndices) {
-          indexCount = normalized.data.length;
-        } else {
-          const actual = normalized.data.length / normalized.type.elemCount;
-          console.assert(
-            actual === vertexCount,
-            "A buffer had the wrong number of vertices! " +
-            "Maybe you made a mistake? " +
-            `Received data for ${actual} vertices but expected ${vertexCount}.`
-          );
-        }
+        const actual = normalized.data.length / normalized.type.elemCount;
+        console.assert(
+          actual === vertexCount,
+          "A buffer had the wrong number of vertices! " +
+          "Maybe you made a mistake? " +
+          `Received data for ${actual} vertices but expected ${vertexCount}.`
+        );
       }
 
       const buffer = VertexBuffer.from(normalized);
-      buffers2.push([name, buffer]);
+      result.push([name, buffer]);
     }
-    return new Mesh(vertexCount, buffers2, indexCount);
+
+    return result;
   }
 
-  public static get square(): Mesh {
-    Mesh.Square ??= Mesh.from(6,
+  public static get square(): Geometry {
+    Geometry.Square ??= Geometry.from(6,
       ["position", GL.FLOAT_VEC2, [
         1, 1,   0, 1,   0, 0,
         0, 0,   1, 0,   1, 1
@@ -690,10 +705,10 @@ export class Mesh {
         0, 0,   1, 0,   1, 1
       ]]
     );
-    return Mesh.Square;
+    return Geometry.Square;
   }
 
-  static Square: Mesh;
+  static Square: Geometry;
 }
 
 
@@ -704,7 +719,7 @@ export class BindMachine {
   instanceUniforms: InstanceUniforms|null = null;
   shader: Shader|null = null;
   material: Material|null = null;
-  mesh: Mesh|null = null;
+  geometry: Geometry|null = null;
   vao: WebGLVertexArrayObject|null = null;
   wereInstanceUniformsChanged = false;
 
@@ -714,7 +729,7 @@ export class BindMachine {
     this.instanceUniforms = null;
     this.shader = null;
     this.material = null;
-    this.mesh = null;
+    this.geometry = null;
     this.vao = null;
     this.wereInstanceUniformsChanged = false;
   }
@@ -849,26 +864,26 @@ export class BindMachine {
   }
 
 
-  // Mesh
+  // Geometry
 
-  public setMeshWithoutVao(mesh: Mesh) {
-    if (this.mesh === mesh)
+  public setGeometryWithoutVao(geometry: Geometry) {
+    if (this.geometry === geometry)
       return;
     this.vao = null;
     glVAO.bindVertexArrayOES(null);
-    this._setMesh(mesh);
+    this._setGeometry(geometry);
   }
 
-  _setMesh(mesh: Mesh) {
+  _setGeometry(geometry: Geometry) {
     console.assert(
-      !!this.shader, "Must have a shader bound before binding a mesh."
+      !!this.shader, "Must have a shader bound before binding geometry."
     );
-    this.mesh = mesh;
+    this.geometry = geometry;
 
     for (const [name, attrib] of this.shader!.vertexAttributes.entries()) {
-      const buffer = mesh.buffers.get(name);
+      const buffer = geometry.vertexBuffers.get(name);
       if (buffer === undefined) {
-        console.warn(`Missing vertex attribute “${name}” in a mesh :(`);
+        console.warn(`Missing vertex attribute “${name}” in a submesh :(`);
         continue;
       }
       console.assert(attrib.type.type === buffer.type.type);
@@ -882,7 +897,7 @@ export class BindMachine {
       );
     }
 
-    const indices = this.mesh.buffers.get("indices");
+    const indices = this.geometry.indexBuffer;
     if (indices && indices.bufferType === GL.ELEMENT_ARRAY_BUFFER)
       gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indices.buffer);
   }
@@ -890,49 +905,66 @@ export class BindMachine {
 
   // VAO
 
-  public createVao(mesh: Mesh, shader: Shader): WebGLVertexArrayObject {
+  public createVao(geometry: Geometry, shader: Shader): WebGLVertexArrayObject {
     this.material = null;
 
     const vao = glVAO.createVertexArrayOES()!;
     this.setVao(vao);
     this._setShader(shader);
-    this._setMesh(mesh);
+    this._setGeometry(geometry);
     return vao;
   }
 
   public setVao(vao: WebGLVertexArrayObject) {
     if (this.vao === vao)
       return;
-    this.mesh = null;
+    this.geometry = null;
     this.vao = vao;
     glVAO.bindVertexArrayOES(vao);
   }
 }
 
 
-// Drawables
+// Drawables (Submesh, Mesh)
 
 export interface Drawable {
   draw(): void;
 }
 
-export class Model implements Drawable {
-  public mesh: Mesh;
+export class Submesh implements Drawable {
+  public geometry: Geometry;
   public material: Material;
   public vao: WebGLVertexArrayObject;
 
-  public constructor(mesh: Mesh, material: Material) {
-    this.mesh = mesh;
+  public constructor(geometry: Geometry, material: Material) {
+    this.geometry = geometry;
     this.material = material;
-    this.vao = bindMachine.createVao(mesh, material.shader);
+    this.vao = bindMachine.createVao(geometry, material.shader);
   }
 
   public draw() {
     bindMachine.setMaterial(this.material);
     bindMachine.setVao(this.vao);
-    if (this.mesh.indexCount !== undefined)
-      gl.drawElements(GL.TRIANGLES, this.mesh.indexCount, GL.UNSIGNED_SHORT, 0);
-    else gl.drawArrays(GL.TRIANGLES, 0, this.mesh.vertexCount);
+    if (this.geometry.indexCount !== undefined) {
+      gl.drawElements(
+        GL.TRIANGLES, this.geometry.indexCount, GL.UNSIGNED_SHORT, 0
+      );
+    } else gl.drawArrays(GL.TRIANGLES, 0, this.geometry.vertexCount);
+  }
+}
+
+export class Mesh implements Drawable {
+  public submeshes: Submesh[];
+  public name?: string;
+
+  public constructor(submeshes: Submesh[], name?: string) {
+    this.name = name;
+    this.submeshes = submeshes;
+  }
+
+  public draw() {
+    for (const submesh of this.submeshes)
+      submesh.draw();
   }
 }
 
@@ -1017,47 +1049,3 @@ export class Node {
     this.parent = node;
   }
 }
-
-// export class Node2D extends Node {
-//   public transform: Matrix3;
-//
-//   public constructor(name?: string) {
-//     super(name);
-//     this.transform = Matrix3.identity;
-//   }
-//
-//   public getGlobalTransform(): Matrix3 {
-//     // eslint-disable-next-line @typescript-eslint/no-this-alias
-//     let node: Node = this;
-//     let tf = this.transform;
-//     while (node.parent) {
-//       node = node.parent;
-//       if (node instanceof Node2D)
-//         tf = node.transform.mult(tf);
-//     }
-//     return tf;
-//   }
-// }
-//
-// export class ModelNode2D extends Node2D implements Drawable {
-//   public model: Model|null = null;
-//   public uniforms: InstanceUniforms;
-//
-//   public constructor(name?: string) {
-//     super(name);
-//     this.uniforms = new InstanceUniforms();
-//   }
-//
-//   public static from(model: Model, name?: string): ModelNode2D {
-//     const result = new ModelNode2D(name);
-//     result.model = model;
-//     return result;
-//   }
-//
-//   public draw() {
-//     const globalTf = this.getGlobalTransform();
-//     this.uniforms.set("local_to_global", GL.FLOAT_MAT3, globalTf);
-//     bindMachine.setInstanceUniforms(this.uniforms);
-//     this.model?.draw();
-//   }
-// }

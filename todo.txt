@@ -3,6 +3,10 @@ x Core render engine
   x Node3D transformation stuff
   x SceneTree3D
   - gltf import? Or obj?
+    x loading geometry
+      - test it with a mesh
+    - loading materials
+      - loading textures
 - 3D half-lambertian extension
 - extend linear algebra stuff
   x dot product and things like that
