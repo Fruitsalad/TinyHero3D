@@ -6,14 +6,15 @@ import {
   WebIO,
   Mesh as GltfMesh,
   Material as GltfMaterial, Scene,
-  Node as GltfNode, Root
+  Node as GltfNode, Root, Extension,
+  Texture as GltfTexture
 } from "@gltf-transform/core";
 import {MeshNode3D, Node3D} from "./3D.ts";
 import {
   GlType,
   IntoBufferObject,
   Geometry,
-  VertexBuffer, Mesh, Submesh, Material
+  VertexBuffer, Mesh, Submesh, Material, Texture
 } from "../graphics/graphics.ts";
 import {Matrix4} from "../math/matrix.ts";
 
@@ -21,28 +22,32 @@ import {Matrix4} from "../math/matrix.ts";
 const GL = WebGLRenderingContext;
 
 interface GltfLoadOptions {
-  loadMaterial: (gltfMaterial: GltfMaterial|null) => Material,
+  loadMaterial: (gltfMaterial: GltfMaterial|null) => Promise<Material>,
   normalizeBufferName?: (gltfName: string) => string
 }
 
 class GltfCache {
   public meshes = new Map<GltfMesh, Mesh>();
-  public materials = new Map<GltfMaterial, Material>();
+  public materials = new Map<GltfMaterial|null, Material>();
 
-  public loadMesh(mesh: GltfMesh, options: GltfLoadOptions): Mesh {
+  public async loadMesh(
+    mesh: GltfMesh, options: GltfLoadOptions
+  ): Promise<Mesh> {
     const cachedResult = this.meshes.get(mesh);
     if (cachedResult)
       return cachedResult;
-    const loaded = loadMesh(mesh, options, this);
+    const loaded = await loadMesh(mesh, options, this);
     this.meshes.set(mesh, loaded);
     return loaded;
   }
 
-  public loadMaterial(mat: GltfMaterial, options: GltfLoadOptions): Material {
+  public async loadMaterial(
+    mat: GltfMaterial|null, options: GltfLoadOptions
+  ): Promise<Material> {
     const cachedResult = this.materials.get(mat);
     if (cachedResult)
       return cachedResult;
-    const loaded = options.loadMaterial(mat);
+    const loaded = await options.loadMaterial(mat);
     this.materials.set(mat, loaded);
     return loaded;
   }
@@ -50,20 +55,25 @@ class GltfCache {
 
 
 export async function loadGltfScene(
-  gltfFile: string, options: GltfLoadOptions
+  gltfFile: string,
+  options: GltfLoadOptions,
+  extensions: (typeof Extension)[] = []
 ): Promise<Node3D> {
-  return loadOnlyScene(await loadGltfRoot(gltfFile), options);
+  return loadOnlyScene(await loadGltfRoot(gltfFile, extensions), options);
 }
 
-export async function loadGltfRoot(gltfFile: string): Promise<Root> {
+export async function loadGltfRoot(
+  gltfFile: string, extensions: (typeof Extension)[] = []
+): Promise<Root> {
   const io = new WebIO();
+  io.registerExtensions(extensions);
   const doc = await io.read(gltfFile);
   return doc.getRoot();
 }
 
 export function loadSpecificMesh(
   root: Root, meshName: string, options: GltfLoadOptions, cache?: GltfCache
-): Mesh {
+): Promise<Mesh> {
   options.normalizeBufferName ??= normalizeGltfBufferName;
   cache ??= new GltfCache();
 
@@ -74,7 +84,9 @@ export function loadSpecificMesh(
   return loadMesh(mesh, options, cache);
 }
 
-export function loadOnlyScene(root: Root, options: GltfLoadOptions): Node3D {
+export function loadOnlyScene(
+  root: Root, options: GltfLoadOptions
+): Promise<Node3D> {
   options.normalizeBufferName ??= normalizeGltfBufferName;
   const cache = new GltfCache();
   const scenes = root.listScenes()
@@ -90,46 +102,63 @@ export function loadOnlyScene(root: Root, options: GltfLoadOptions): Node3D {
   return loadScene(scenes[0], options, cache);
 }
 
-export function loadScene(
+export function loadTexture(texture: GltfTexture): Promise<Texture> {
+  return Texture.fromEncodedImage(texture.getImage()!, texture.getMimeType());
+}
+
+export async function loadScene(
   scene: Scene, options: GltfLoadOptions, cache: GltfCache
-): Node3D {
+): Promise<Node3D> {
   options.normalizeBufferName ??= normalizeGltfBufferName;
   const result = new Node3D(scene.getName());
-  for (const child of scene.listChildren())
-    result.addChild(loadBranch(child, options, cache));
+
+  // Load all the child branches (we try to do it simultaneously for `async`)
+  const branches = await Promise.all(
+    scene.listChildren()
+      .map(async child => await loadBranch(child, options, cache))
+  );
+  for (const branch of branches)
+    result.addChild(branch);
+
   return result;
 }
 
-function loadBranch(
+async function loadBranch(
   gltfNode: GltfNode, options: GltfLoadOptions, cache: GltfCache
-): Node3D {
+): Promise<Node3D> {
   let result: Node3D;
 
+  // Load the mesh if there is one, or create a basic Node3D
   const gltfMesh = gltfNode.getMesh();
   if (gltfMesh) {
     const meshNode = new MeshNode3D(gltfNode.getName());
-    meshNode.mesh = cache.loadMesh(gltfMesh, options);
+    meshNode.mesh = await cache.loadMesh(gltfMesh, options);
     result = meshNode;
   } else result = new Node3D(gltfNode.getName());
 
+  // Set the transform
   result.transform = new Matrix4(gltfNode.getMatrix(), false);
 
-  for (const child of gltfNode.listChildren())
-    result.addChild(loadBranch(child, options, cache));
+  // Load all the child branches (we try to do it simultaneously for `async`)
+  const branches = await Promise.all(
+    gltfNode.listChildren()
+      .map(async child => await loadBranch(child, options, cache))
+  );
+  for (const branch of branches)
+    result.addChild(branch);
+
   return result;
 }
 
-function loadMesh(
+async function loadMesh(
   mesh: GltfMesh, options: GltfLoadOptions, cache: GltfCache
-): Mesh {
-  const submeshes = mesh.listPrimitives().map(primitive => {
-    const geometry = loadGeometry(primitive, options.normalizeBufferName!);
-    const gltfMat = primitive.getMaterial();
-    const material =
-      (gltfMat !== null ? cache.materials.get(gltfMat) : undefined)
-      ?? options.loadMaterial(gltfMat);
+): Promise<Mesh> {
+  const submeshes = await Promise.all(mesh.listPrimitives().map(async prim => {
+    const geometry = loadGeometry(prim, options.normalizeBufferName!);
+    const gltfMat = prim.getMaterial();
+    const material = await cache.loadMaterial(gltfMat, options);
     return new Submesh(geometry, material);
-  });
+  }));
   const name = mesh.getName();
   return new Mesh(submeshes, name);
 }

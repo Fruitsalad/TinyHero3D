@@ -2,18 +2,22 @@ x Core render engine
 - 3D unlit extension
   x Node3D transformation stuff
   x SceneTree3D
-  - gltf import? Or obj?
+  x gltf import? Or obj?
     x loading geometry
-      - test it with a mesh
-    - loading materials
-      - loading textures
-- 3D half-lambertian extension
+      x test it with a mesh
+    x loading materials
+      x loading textures
+  - create a little extension
+    - proprietary mesh format
+- 3D half-lambertian extension?
   - transform normals to world or view space
-- extend linear algebra stuff
+x extend linear algebra stuff
   x dot product and things like that
   x invert matrix
-    - test matrix invert
+    x test matrix invert
+  - rotors
 - PBR?
+  - loading PBR materials
 - 2D extension
 - Example
-- remove indices from vertex buffer
+x remove indices from vertex buffer

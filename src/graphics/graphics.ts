@@ -48,7 +48,6 @@ export function initGraphics(
     "isn't available on yours."
   );
   gl.frontFace(GL.CW);
-  gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true);
   gl.enable(gl.DEPTH_TEST);
 
   // Create the bind machine.
@@ -375,10 +374,30 @@ export class Texture {
     // We need to flip the bitmap because OpenGL and the HTML/JS spec disagree
     // about whether the first byte is the bottom-left or the top-left corner.
     const yflip = await createImageBitmap(bitmap, {imageOrientation: "flipY"});
+    return Texture.from(yflip);
+  }
 
+  public static fromEncodedImage(
+    bytes: Uint8Array, mimetype: string
+  ): Promise<Texture> {
+    const blob = new Blob([bytes], { type: mimetype });
+    return Texture.fromImageURL(URL.createObjectURL(blob));
+  }
+
+  public static fromImageURL(url: string): Promise<Texture> {
+    // Yes, this is the official way of making the browser parse an image from
+    // a URL: Slap it into a HTML element and then read the data once it's ready
+    return new Promise((resolve, _) => {
+      const image = new Image();
+      image.src = url;
+      image.onload = () => resolve(Texture.from(image));
+    });
+  }
+
+  public static from(source: TexImageSource): Texture {
     const texture = gl.createTexture()!;
     gl.bindTexture(GL.TEXTURE_2D, texture);
-    gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, yflip);
+    gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, source);
 
     // This is required for all textures that aren't powers of two (except for
     // the magnification filter), and it's also a fairly sensible default

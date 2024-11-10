@@ -1,40 +1,48 @@
 import {
   gl, initGraphics, Material, Geometry, Submesh, Mesh, Shader, vec3,
   Camera3D, MeshNode3D, SceneTree3D, Matrix4, aspectRatio, setResizeCallback,
-  loadGltfRoot, loadSpecificMesh, Node3D, loadOnlyScene
+  loadGltfRoot, loadSpecificMesh, Node3D, loadOnlyScene, Texture, loadTexture
 } from "render_engine/src/bundles/full";
 import * as GLTF from "@gltf-transform/core";
+import {KHRMaterialsUnlit} from "@gltf-transform/extensions";
 
 
-const vertexSource = `
+const coloredVertexSource = `
 attribute vec3 position;
-// attribute vec3 normal;
-// attribute vec2 texcoord;
-
 uniform mat4 local_to_clip;
 
-// varying vec2 _uv;
-// varying vec3 _normal;
-
 void main() {
-  // _uv = texcoord;
-  // _normal = normal;
   gl_Position = local_to_clip * vec4(position, 1.0);
 }
 `;
-const fragmentSource = `
+const coloredFragmentSource = `
 precision highp float;
-
-// varying vec2 _uv;
-// varying vec3 _normal;
+uniform vec3 color;
 
 void main() {
-  // float ndotl = max(dot(_normal, vec3(1,0,0)), 0.0);
-  // vec3 dark_color = vec3(0.3, 0.1, 0.1);
-  // vec3 bright_color = vec3(1, 0.4, 0.4);
-  // vec3 color = dark_color + ndotl * (bright_color-dark_color);
-  // gl_FragColor = vec4(color, 1);
-  gl_FragColor = vec4(1);
+  gl_FragColor = vec4(color, 1);
+}
+`;
+
+const unlitVertexSource = `
+attribute vec3 position;
+attribute vec2 texcoord;
+uniform mat4 local_to_clip;
+varying vec2 _texcoord;
+
+void main() {
+  _texcoord = texcoord;
+  gl_Position = local_to_clip * vec4(position, 1.0);
+}
+`;
+const unlitFragmentSource = `
+precision highp float;
+varying vec2 _texcoord;
+uniform sampler2D tex;
+
+void main() {
+  vec3 sample = texture2D(tex, _texcoord).rgb;
+  gl_FragColor = vec4(sample, 1);
 }
 `;
 
@@ -49,8 +57,10 @@ initGraphics($("canvas") as HTMLCanvasElement);
 tree.setAspectRatio(aspectRatio);
 setResizeCallback(() => tree.setAspectRatio(aspectRatio));
 
-const defaultShader = new Shader(vertexSource, fragmentSource);
-const defaultMaterial = Material.from(defaultShader);
+const PURPLE = vec3(0.47, 0.28, 0.64);
+const coloredShader = new Shader(coloredVertexSource, coloredFragmentSource);
+const unlitShader = new Shader(unlitVertexSource, unlitFragmentSource);
+const defaultMaterial = Material.from(coloredShader, ["color", PURPLE]);
 
 (async () => {
   await initScene();
@@ -70,17 +80,21 @@ async function initScene() {
   camera.position = vec3(0, 0, 3);
   cameraController.addChild(camera);
 
-  const gltf = await loadGltfRoot("./shiba/scene.gltf");
-  const scene = loadOnlyScene(gltf, { loadMaterial });
+  const gltf = await loadGltfRoot("./shiba/scene.gltf", [KHRMaterialsUnlit]);
+  const scene = await loadOnlyScene(gltf, { loadMaterial });
   tree.root.addChild(scene);
 }
 
-function createMeshNodeForModel(root: GLTF.Root, name: string) {
-  const mesh = loadSpecificMesh(root, name, { loadMaterial });
-  return MeshNode3D.from(mesh, name);
-}
+async function loadMaterial(material: GLTF.Material|null): Promise<Material> {
+  if (material === null)
+    return defaultMaterial;
 
-function loadMaterial(material: GLTF.Material|null): Material {
+  const unlit = material.getExtension(KHRMaterialsUnlit.EXTENSION_NAME);
+  if (unlit) {
+    const tex = await loadTexture(material.getBaseColorTexture()!);
+    return Material.from(unlitShader, ["tex", tex]);
+  }
+
   return defaultMaterial;
 }
 
