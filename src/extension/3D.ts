@@ -193,7 +193,7 @@ export class Node3D extends Node {
     // Update the global transform.
     const parent = this.tryGetParentNode3D();
     this._globalTransform =
-      parent?._globalTransform.mult(this._transform) ?? this._transform.clone();
+      (parent ? this._transform.mult(parent._globalTransform) : this._transform.clone());
 
     // Let this node's children update their global transform.
     for (const child of this.children)

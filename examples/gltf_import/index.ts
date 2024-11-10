@@ -1,7 +1,7 @@
 import {
   gl, initGraphics, Material, Geometry, Submesh, Mesh, Shader, vec3,
   Camera3D, MeshNode3D, SceneTree3D, Matrix4, aspectRatio, setResizeCallback,
-  loadGltfRoot, loadSpecificMesh, Node3D
+  loadGltfRoot, loadSpecificMesh, Node3D, loadOnlyScene
 } from "render_engine/src/bundles/full";
 import * as GLTF from "@gltf-transform/core";
 
@@ -43,7 +43,7 @@ void main() {
 const GL = WebGLRenderingContext;
 const targetFramerate = 30;
 let tree = new SceneTree3D();
-let camera_controller;
+let cameraController: Node3D;
 
 initGraphics($("canvas") as HTMLCanvasElement);
 tree.setAspectRatio(aspectRatio);
@@ -63,31 +63,16 @@ function $(cssQuery: string): Element {
 }
 
 async function initScene() {
-  camera_controller = new Node3D("camera controller");
-  tree.root.addChild(camera_controller);
+  cameraController = new Node3D("camera controller");
+  tree.root.addChild(cameraController);
 
   const camera = Camera3D.Perspective();
   camera.position = vec3(0, 0, 3);
-  // camera.eulerAngles = vec3(0, 0, 0);
-  camera_controller.addChild(camera);
+  cameraController.addChild(camera);
 
   const gltf = await loadGltfRoot("./shiba/scene.gltf");
-  const node = createMeshNodeForModel(gltf, "Group18985_default_0");
-  tree.root.addChild(node);
-
-  const node2 = createMeshNodeForModel(gltf, "Box002_default_0");
-  // node2.scale = vec3(0.1);
-  node2.position = vec3(2, 0, 0);
-  tree.root.addChild(node2);
-
-  // const node3 = MeshNode3D.from(mesh, name);
-  // node3.position = vec3(-2, 0, 0);
-  // tree.root.addChild(node3);
-
-  // const meshes = gltfScene.findAll(node => node instanceof MeshNode3D);
-  // meshes[0].remove();
-
-
+  const scene = loadOnlyScene(gltf, { loadMaterial });
+  tree.root.addChild(scene);
 }
 
 function createMeshNodeForModel(root: GLTF.Root, name: string) {
@@ -101,7 +86,8 @@ function loadMaterial(material: GLTF.Material|null): Material {
 
 function draw() {
   const time = performance.now()/1000;
-  // camera_controller.eulerAngles = vec3(time/2, time/5, time/9);
+  const t = Math.sin(time) * 0.5 + 0.5;
+  cameraController.eulerAngles = vec3(t * 0.6, time/2, 0);
 
   gl.clearColor(1, 0, 0, 1);
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);

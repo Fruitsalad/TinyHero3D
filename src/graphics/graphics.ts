@@ -308,6 +308,10 @@ export class VertexBuffer {
   public static createBuffer(
     data: BufferSource, buffer_type: GLenum, usage: GLenum
   ): WebGLBuffer {
+    // We don't want to accidentally change a VAO (which can happen especially
+    // if we're making an index buffer)
+    bindMachine.setVao(null);
+
     const buffer = gl.createBuffer()!;
     gl.bindBuffer(buffer_type, buffer);
     gl.bufferData(buffer_type, data, usage);
@@ -921,7 +925,7 @@ export class BindMachine {
     return vao;
   }
 
-  public setVao(vao: WebGLVertexArrayObject) {
+  public setVao(vao: WebGLVertexArrayObject|null) {
     if (this.vao === vao)
       return;
     this.geometry = null;
@@ -950,7 +954,6 @@ export class Submesh implements Drawable {
 
   public draw() {
     bindMachine.setMaterial(this.material);
-    // gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, this.geometry.indexBuffer!.buffer);
     bindMachine.setVao(this.vao);
     if (this.geometry.indexCount !== undefined) {
       gl.drawElements(
