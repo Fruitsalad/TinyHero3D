@@ -314,6 +314,12 @@ export class VertexBuffer {
     return buffer;
   }
 
+  public static createIndexBuffer(indices: number[]) {
+    return VertexBuffer.from({
+      data: indices, type: GlType(GL.UNSIGNED_SHORT), isIndices: true
+    });
+  }
+
   public static normalizeIntoBuffer(a: IntoBuffer): IntoBufferObject {
     if (Array.isArray(a))
       a = VertexBuffer.tupleToObject(a);
@@ -662,9 +668,7 @@ export class Geometry {
     indices: number[],
     ...vertexBuffers: IntoNamedVertexBuffer[]
   ): Geometry {
-    const indexBuffer = VertexBuffer.from({
-      data: indices, type: GlType(GL.UNSIGNED_SHORT), isIndices: true
-    });
+    const indexBuffer = VertexBuffer.createIndexBuffer(indices);
     const buffers = Geometry.createNamedBuffers(vertexCount, vertexBuffers);
     return new Geometry(vertexCount, buffers, indices.length, indexBuffer);
   }
@@ -880,10 +884,16 @@ export class BindMachine {
     );
     this.geometry = geometry;
 
+    const indices = this.geometry.indexBuffer;
+    if (indices)
+      gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indices.buffer);
+
     for (const [name, attrib] of this.shader!.vertexAttributes.entries()) {
       const buffer = geometry.vertexBuffers.get(name);
       if (buffer === undefined) {
-        console.warn(`Missing vertex attribute “${name}” in a submesh :(`);
+        console.warn(
+          `Missing vertex attribute “${name}” in a submesh :(`
+        );
         continue;
       }
       console.assert(attrib.type.type === buffer.type.type);
@@ -896,10 +906,6 @@ export class BindMachine {
         buffer.isNormalized, 0, 0
       );
     }
-
-    const indices = this.geometry.indexBuffer;
-    if (indices && indices.bufferType === GL.ELEMENT_ARRAY_BUFFER)
-      gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, indices.buffer);
   }
 
 
@@ -944,6 +950,7 @@ export class Submesh implements Drawable {
 
   public draw() {
     bindMachine.setMaterial(this.material);
+    // gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, this.geometry.indexBuffer!.buffer);
     bindMachine.setVao(this.vao);
     if (this.geometry.indexCount !== undefined) {
       gl.drawElements(
@@ -1030,10 +1037,54 @@ export class Node {
 
   // Branch operations
 
-  public recursively(callback: (node: Node) => void) {
-    callback(this);
+  // Depth-first tree traversal
+  public recursively(callback: (node: Node) => boolean|void): boolean {
+    if (callback(this))
+      return true;
     for (const child of this.children)
-      child.recursively(callback);
+      if (child.recursively(callback))
+        return true;
+    return false;
+  }
+
+  public recursivelyBreadthFirst(
+    callback: (node: Node) => boolean|void
+  ): boolean {
+    if (callback(this))
+      return true;
+    return this._recursivelyBreadthFirst(callback);
+  }
+
+  _recursivelyBreadthFirst(
+    callback: (node: Node) => boolean|void
+  ): boolean {
+    for (const child of this.children)
+      if (callback(this))
+        return true;
+    for (const child of this.children)
+      if (child.recursivelyBreadthFirst(callback))
+        return true;
+    return false;
+  }
+
+  public find(callback: (node: Node) => boolean): Node|undefined {
+    let result: Node|undefined = undefined;
+    this.recursivelyBreadthFirst(node => {
+      if (!callback(node))
+        return false;
+      result = node;
+      return true;
+    });
+    return result;
+  }
+
+  public findAll(callback: (node: Node) => boolean): Node[] {
+    let result: Node[] = [];
+    this.recursively(node => {
+      if (callback(node))
+        result.push(node);
+    });
+    return result;
   }
 
 

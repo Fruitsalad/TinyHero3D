@@ -1,0 +1,19 @@
+{
+  "name": "render_engine_examples",
+  "description": "Examples",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "vite"
+  },
+  "dependencies": {
+    "render_engine": "file:../",
+    "@gltf-transform/core": "^4.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10",
+    "typescript": "~5.6.2",
+    "tslib": "^2.8.1"
+  }
+}

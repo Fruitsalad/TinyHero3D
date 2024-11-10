@@ -22,7 +22,7 @@ const GL = WebGLRenderingContext;
 
 interface GltfLoadOptions {
   loadMaterial: (gltfMaterial: GltfMaterial|null) => Material,
-  normalizeBufferName: (gltfName: string) => string
+  normalizeBufferName?: (gltfName: string) => string
 }
 
 class GltfCache {
@@ -49,15 +49,33 @@ class GltfCache {
 }
 
 
-async function loadGltf(
+export async function loadGltfScene(
   gltfFile: string, options: GltfLoadOptions
 ): Promise<Node3D> {
-  const io = new WebIO();
-  const doc = await io.read(gltfFile);
-  return loadRoot(doc.getRoot(), options);
+  return loadOnlyScene(await loadGltfRoot(gltfFile), options);
 }
 
-function loadRoot(root: Root, options: GltfLoadOptions): Node3D {
+export async function loadGltfRoot(gltfFile: string): Promise<Root> {
+  const io = new WebIO();
+  const doc = await io.read(gltfFile);
+  return doc.getRoot();
+}
+
+export function loadSpecificMesh(
+  root: Root, meshName: string, options: GltfLoadOptions, cache?: GltfCache
+): Mesh {
+  options.normalizeBufferName ??= normalizeGltfBufferName;
+  cache ??= new GltfCache();
+
+  const mesh = root.listMeshes().find(mesh => mesh.getName() === meshName);
+  if (!mesh)
+    throw new Error(`The mesh “${meshName}” was not found :(`);
+
+  return loadMesh(mesh, options, cache);
+}
+
+export function loadOnlyScene(root: Root, options: GltfLoadOptions): Node3D {
+  options.normalizeBufferName ??= normalizeGltfBufferName;
   const cache = new GltfCache();
   const scenes = root.listScenes()
 
@@ -72,9 +90,10 @@ function loadRoot(root: Root, options: GltfLoadOptions): Node3D {
   return loadScene(scenes[0], options, cache);
 }
 
-function loadScene(
+export function loadScene(
   scene: Scene, options: GltfLoadOptions, cache: GltfCache
 ): Node3D {
+  options.normalizeBufferName ??= normalizeGltfBufferName;
   const result = new Node3D(scene.getName());
   for (const child of scene.listChildren())
     result.addChild(loadBranch(child, options, cache));
@@ -104,7 +123,7 @@ function loadMesh(
   mesh: GltfMesh, options: GltfLoadOptions, cache: GltfCache
 ): Mesh {
   const submeshes = mesh.listPrimitives().map(primitive => {
-    const geometry = loadGeometry(primitive, options.normalizeBufferName);
+    const geometry = loadGeometry(primitive, options.normalizeBufferName!);
     const gltfMat = primitive.getMaterial();
     const material =
       (gltfMat !== null ? cache.materials.get(gltfMat) : undefined)
@@ -119,12 +138,13 @@ function loadGeometry(
   primitive: Primitive, normalizeBufferName: (gltfName: string) => string
 ): Geometry {
   const indexData = primitive.getIndices();
-  const indexList = indexData ? gatherIndices(indexData) : undefined;
+  const indexList = (indexData ? gatherIndices(indexData) : undefined);
   const indices =
-    indexList ? VertexBuffer.from([GL.UNSIGNED_SHORT, indexList]) : undefined;
+    (indexList ? VertexBuffer.createIndexBuffer(indexList) : undefined);
   const indexCount = indexList?.length;
 
   const attribs = primitive.listAttributes();
+  const attribNames = primitive.listSemantics();
   if (attribs.length === 0) {
     throw new Error(
       "A submesh had no vertex attributes! The glTF loader requires that a " +
@@ -133,7 +153,7 @@ function loadGeometry(
   }
   const vertexCount = attribs[0].getCount();
 
-  const vertices = attribs.map(attrib => {
+  const vertices = attribs.map((attrib, i) => {
     console.assert(
       attrib.getCount() === vertexCount,
       `The attribute “${attrib.getName()}” had ${attrib.getCount()} ` +
@@ -141,7 +161,7 @@ function loadGeometry(
       `${vertexCount} vertices. All attributes in a mesh should have the ` +
       "same amount of vertices!"
     );
-    const name = normalizeBufferName(attrib.getName());
+    const name = normalizeBufferName(attribNames[i]);
     const bufferData = gatherVertexBufferData(attrib);
     const buffer = VertexBuffer.from(bufferData);
     return [name, buffer] as [string, VertexBuffer];
@@ -152,7 +172,7 @@ function loadGeometry(
 
 // This function turns buffer names like `POSITION` and `TEXCOORD_0` into
 // `position` and `texcoord`.
-function normalizeGltfBufferName(gltfName: string): string {
+export function normalizeGltfBufferName(gltfName: string): string {
   // In glTF-2.0, buffers usually have an all-caps name, so we make it lowercase
   let name = gltfName.toLowerCase();
 

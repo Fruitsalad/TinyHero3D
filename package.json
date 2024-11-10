@@ -3,7 +3,8 @@
   "description": "A tiny WebGL rendering engine",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "main": "lib/full/full.es.js",
+  "types": "lib/full/full.es.d.ts",
   "scripts": {
     "build": "rm -rf lib && rollup -c",
     "start": "rm -rf lib && rollup -c"

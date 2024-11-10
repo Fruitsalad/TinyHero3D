@@ -1,7 +1,7 @@
 import {
   gl, initGraphics, Material, Geometry, Submesh, Mesh, Shader, vec3,
   Camera3D, MeshNode3D, SceneTree3D, Matrix4, aspectRatio, setResizeCallback
-} from "../../lib/full/full.es.js";
+} from "render_engine";
 
 
 const vertexSource = `
