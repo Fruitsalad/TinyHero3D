@@ -1,10 +1,10 @@
 import {
-  gl, initGraphics, Material, Mesh, Model, Shader, vec3,
-  Camera3D, ModelNode3D, SceneTree3D, Matrix4, aspectRatio, setResizeCallback
+  gl, initGraphics, Material, Geometry, Submesh, Mesh, Shader, vec3,
+  Camera3D, MeshNode3D, SceneTree3D, Matrix4, aspectRatio, setResizeCallback
 } from "../../lib/full/full.es.js";
 
 
-const vertex_source = `
+const vertexSource = `
 attribute vec3 position;
 attribute vec3 normal;
 attribute vec2 uv;
@@ -20,7 +20,7 @@ void main() {
   gl_Position = local_to_clip * vec4(position, 1.0);
 }
 `;
-const fragment_source = `
+const fragmentSource = `
 precision highp float;
 
 varying vec2 _uv;
@@ -58,7 +58,15 @@ function $(cssQuery) {
 function initScene() {
   const i = 0.5;
   const o = -0.5;
-  const cube_mesh = Mesh.from(24,
+  const cubeGeometry = Geometry.from_indexed(24,
+    [
+      0,1,2, 0,2,3,
+      4,5,6, 4,6,7,
+      8,9,10, 8,10,11,
+      12,13,14, 12,14,15,
+      16,17,18, 16,18,19,
+      20,21,22, 20,22,23
+    ],
     ["position", GL.FLOAT_VEC3, [
       i,o,i, i,i,i, o,i,i, o,o,i,  // North face
       i,o,o, i,o,i, i,i,i, i,i,o,  // East face
@@ -82,34 +90,26 @@ function initScene() {
       0,0, 0,1, 1,1, 1,0,  // West face
       0,0, 0,1, 1,1, 1,0,  // Top face
       0,0, 0,1, 1,1, 1,0,  // Bottom face
-    ]],
-    ["indices", GL.UNSIGNED_SHORT, [
-      0,1,2, 0,2,3,
-      4,5,6, 4,6,7,
-      8,9,10, 8,10,11,
-      12,13,14, 12,14,15,
-      16,17,18, 16,18,19,
-      20,21,22, 20,22,23
     ]]
   );
-  const shader = new Shader(vertex_source, fragment_source);
+  const shader = new Shader(vertexSource, fragmentSource);
   const material = Material.from(shader);
-  const cube_model = new Model(cube_mesh, material);
+  const cubeMesh = new Mesh([new Submesh(cubeGeometry, material)]);
 
   const camera = Camera3D.Perspective();
   camera.position = vec3(0, 0, 3);
   tree.root.addChild(camera);
 
-  cube = ModelNode3D.from(cube_model, "cube");
+  cube = MeshNode3D.from(cubeMesh, "cube");
   tree.root.addChild(cube);
 
-  cube2 = ModelNode3D.from(cube_model, "cube2");
+  cube2 = MeshNode3D.from(cubeMesh, "cube2");
   cube2.eulerAngles = vec3(0, -Math.PI/4, Math.PI/4);
   cube2.position = vec3(2, 0, -3);
   cube2.scale = vec3(1.1);
   tree.root.addChild(cube2);
 
-  cube3 = ModelNode3D.from(cube_model, "cube3");
+  cube3 = MeshNode3D.from(cubeMesh, "cube3");
   cube3.position = vec3(1);
   cube3.scale = vec3(0.3);
   cube.addChild(cube3);

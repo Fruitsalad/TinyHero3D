@@ -8,6 +8,7 @@ x Core render engine
     - loading materials
       - loading textures
 - 3D half-lambertian extension
+  - transform normals to world or view space
 - extend linear algebra stuff
   x dot product and things like that
   x invert matrix
