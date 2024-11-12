@@ -3,8 +3,19 @@ import {Matrix, Matrix2, Matrix3, Matrix4} from "../math/matrix";
 // @ts-expect-error  WebGL debug does not support Typescript, but it's fine.
 import WebGLDebugUtils from "./external/webgl-debug";
 
+// In a NodeJS setting (like for the tool scripts) WebGLRenderingContext is not
+// defined, but we still need its constants. For that reason, we grab some of
+// the constants here. We really don't want to include this in browser builds
+// because it makes the minified version a lot bigger.
+export const GL = window.WebGLRenderingContext ??
+  // @ts-expect-error __IS_MINIFIED_BUILD__ is an environment variable.
+  (__IS_MINIFIED_BUILD__ ? ({} as WebGLRenderingContext) : {
+  // Clear
+  DEPTH_BUFFER_BIT: 0x00000100,
+  STENCIL_BUFFER_BIT: 0x00000400,
+  COLOR_BUFFER_BIT: 0x00004000,
 
-export const GL = {
+  // Types
   BYTE: 0x1400,
   UNSIGNED_BYTE: 0x1401,
   SHORT: 0x1402,
@@ -26,6 +37,8 @@ export const GL = {
   FLOAT_MAT3: 0x8B5B,
   FLOAT_MAT4: 0x8B5C,
   SAMPLER_2D: 0x8B5E,
+
+  // Shaders & buffers
   COMPILE_STATUS: 0x8B81,
   LINK_STATUS: 0x8B82,
   FRAGMENT_SHADER: 0x8B30,
@@ -38,6 +51,7 @@ export const GL = {
   DYNAMIC_DRAW: 0x88E8,
   TRIANGLES: 0x0004,
 
+  // Textures & samplers
   TEXTURE_2D: 0x0DE1,
   TEXTURE0: 0x84C0,
   NEAREST: 0x2600,
@@ -53,9 +67,8 @@ export const GL = {
   REPEAT: 0x2901,
   CLAMP_TO_EDGE: 0x812F,
   MIRRORED_REPEAT: 0x8370,
-
   RGBA: 0x1908
-}
+});
 
 export let gl: WebGLRenderingContext;
 export let glVAO: OES_vertex_array_object;
@@ -1008,6 +1021,17 @@ export class BindMachine {
 
 
 // Drawables (Submesh, Mesh)
+
+export let clearColor = new Vec4(0,0,0,0);
+
+export function startDrawing() {
+  gl.clearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+}
+
+export function finishDrawing() {
+  gl.flush();
+}
 
 export interface Drawable {
   draw(): void;

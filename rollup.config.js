@@ -104,5 +104,5 @@ function bundle(name) {
 export default [
   ...bundle("full"),
   ...bundle("core"),
-  ...bundle("bundle3D")
+  ...bundle("unlit3D")
 ]

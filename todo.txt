@@ -5,7 +5,7 @@ x extend linear algebra stuff
   x invert matrix
     x test matrix invert
   - rotors
-- 3D unlit extension
+x 3D unlit extension
   x Node3D transformation stuff
   x SceneTree3D
   x gltf import? Or obj?
@@ -13,14 +13,19 @@ x extend linear algebra stuff
       x test it with a mesh
     x loading materials
       x loading textures
-
-- 3D unlit extension
-  - proprietary mesh format
+  x proprietary mesh format
     x read/write
-    - gltf to btoc
-    - load btoc mesh
-  - turn it into an extension
+    x gltf to btoc
+    x load btoc mesh
+  x turn it into an extension
+- try it with bistro and that other scene with the castle
 - Example
+
+- optimization
+  - BatchNode3D
+  - sorting
+  - instancing?
+- Multiple canvases (most importantly change `aspectRatio`)
 
 - PBR?
   - loading PBR materials

@@ -8,6 +8,9 @@ import {
 } from "../../graphics/graphics.ts";
 import {getCachedOrCompute, getCachedOrComputeAsync} from "../../util/cache.ts";
 
+
+// Btoc's JSON stuff.
+
 export interface SceneData {
   nodes: NodeData,
   meshes: MeshData[],
@@ -46,42 +49,65 @@ export interface TextureData {
 }
 
 
-type LoadMaterialCallback =
-  (shaderName: string, uniforms: Map<string, IntoUniform>) => Promise<Material>;
+// Shader factory
+// (This is necessary for loading materials from files)
 
+type ShaderConstructor = (uniforms: Map<string, IntoUniform>) => Material;
+const shaderConstructors = new Map<string, ShaderConstructor>();
+let fallbackMaterial: Material|null = null;
+
+export function setFallbackMaterial(material: Material) {
+  fallbackMaterial = material;
+}
+
+export function registerShaderType(
+  shaderType: string, constructor: ShaderConstructor
+) {
+  shaderConstructors.set(shaderType, constructor);
+}
+
+function constructMaterial(
+  shaderName: string, uniforms: Map<string, IntoUniform>
+): Material {
+  const constructor = shaderConstructors.get(shaderName);
+  if (constructor)
+    return constructor(uniforms);
+  console.log(
+    `No shader constructor was registered for this shader type: ${shaderName}`
+  );
+  console.assert(fallbackMaterial !== null);
+  return fallbackMaterial!;
+}
+
+
+// Btoc mesh reader
 
 export class BtocMeshReader {
   btoc: BtocFile;
   scene: SceneData;
-  loadMaterialCallback: LoadMaterialCallback;
 
   meshes = new Map<number, Mesh>();
   textures = new Map<number, Texture>();
   geometries = new Map<number, Geometry>();
   materials = new Map<number, Material>();
 
-  constructor(btoc: BtocFile, loadMaterial: LoadMaterialCallback) {
+  constructor(btoc: BtocFile) {
     this.btoc = btoc;
     this.scene = JSON.parse(btoc.getText("root")) as SceneData;
-    this.loadMaterialCallback = loadMaterial;
   }
 
-  public static async loadSceneFromURL(
-    url: string, loadMaterial: LoadMaterialCallback
-  ): Promise<Node3D> {
+  public static async loadSceneFromURL(url: string): Promise<Node3D> {
     const response = await fetch(url);
     if (!response.ok)
       throw new Error(`Could not fetch BTOC file from “${url}”`);
     const buffer = await response.arrayBuffer();
     const bytes = new Uint8Array(buffer);
-    return BtocMeshReader.loadScene(bytes, loadMaterial);
+    return BtocMeshReader.loadScene(bytes);
   }
 
-  public static loadScene(
-    bytes: Uint8Array, loadMaterial: LoadMaterialCallback
-  ): Promise<Node3D> {
+  public static loadScene(bytes: Uint8Array): Promise<Node3D> {
     const btoc = BtocFile.from(bytes);
-    const loader = new BtocMeshReader(btoc, loadMaterial);
+    const loader = new BtocMeshReader(btoc);
     return loader.loadScene();
   }
 
@@ -246,7 +272,7 @@ export class BtocMeshReader {
       uniforms.set(name, value);
     }
 
-    return this.loadMaterialCallback(material.shaderName, uniforms);
+    return constructMaterial(material.shaderName, uniforms);
   }
 
 
