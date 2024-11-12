@@ -3,7 +3,60 @@ import {Matrix, Matrix2, Matrix3, Matrix4} from "../math/matrix";
 // @ts-expect-error  WebGL debug does not support Typescript, but it's fine.
 import WebGLDebugUtils from "./external/webgl-debug";
 
-const GL = WebGLRenderingContext;
+
+export const GL = {
+  BYTE: 0x1400,
+  UNSIGNED_BYTE: 0x1401,
+  SHORT: 0x1402,
+  UNSIGNED_SHORT: 0x1403,
+  INT: 0x1404,
+  UNSIGNED_INT: 0x1405,
+  FLOAT: 0x1406,
+  FLOAT_VEC2: 0x8B50,
+  FLOAT_VEC3: 0x8B51,
+  FLOAT_VEC4: 0x8B52,
+  INT_VEC2: 0x8B53,
+  INT_VEC3: 0x8B54,
+  INT_VEC4: 0x8B55,
+  BOOL: 0x8B56,
+  BOOL_VEC2: 0x8B57,
+  BOOL_VEC3: 0x8B58,
+  BOOL_VEC4: 0x8B59,
+  FLOAT_MAT2: 0x8B5A,
+  FLOAT_MAT3: 0x8B5B,
+  FLOAT_MAT4: 0x8B5C,
+  SAMPLER_2D: 0x8B5E,
+  COMPILE_STATUS: 0x8B81,
+  LINK_STATUS: 0x8B82,
+  FRAGMENT_SHADER: 0x8B30,
+  VERTEX_SHADER: 0x8B31,
+  ACTIVE_UNIFORMS: 0x8B86,
+  ACTIVE_ATTRIBUTES: 0x8B89,
+  ARRAY_BUFFER: 0x8892,
+  ELEMENT_ARRAY_BUFFER: 0x8893,
+  STATIC_DRAW: 0x88E4,
+  DYNAMIC_DRAW: 0x88E8,
+  TRIANGLES: 0x0004,
+
+  TEXTURE_2D: 0x0DE1,
+  TEXTURE0: 0x84C0,
+  NEAREST: 0x2600,
+  LINEAR: 0x2601,
+  NEAREST_MIPMAP_NEAREST: 0x2700,
+  LINEAR_MIPMAP_NEAREST: 0x2701,
+  NEAREST_MIPMAP_LINEAR: 0x2702,
+  LINEAR_MIPMAP_LINEAR: 0x2703,
+  TEXTURE_MAG_FILTER: 0x2800,
+  TEXTURE_MIN_FILTER: 0x2801,
+  TEXTURE_WRAP_S: 0x2802,
+  TEXTURE_WRAP_T: 0x2803,
+  REPEAT: 0x2901,
+  CLAMP_TO_EDGE: 0x812F,
+  MIRRORED_REPEAT: 0x8370,
+
+  RGBA: 0x1908
+}
+
 export let gl: WebGLRenderingContext;
 export let glVAO: OES_vertex_array_object;
 export let canvas: HTMLCanvasElement;
@@ -47,7 +100,7 @@ export function initGraphics(
     "This extension *should* be available on all browsers, but apparently it " +
     "isn't available on yours."
   );
-  gl.frontFace(GL.CW);
+  gl.frontFace(gl.CW);
   gl.enable(gl.DEPTH_TEST);
 
   // Create the bind machine.
@@ -119,7 +172,7 @@ export function getElementCountOfGlType(type: GLenum) {
   }
 }
 
-function isSupportedFloatType(type: GLenum): boolean {
+export function isSupportedFloatType(type: GLenum): boolean {
   switch (type) {
     case GL.FLOAT: case GL.FLOAT_VEC2: case GL.FLOAT_VEC3: case GL.FLOAT_VEC4:
     case GL.FLOAT_MAT2: case GL.FLOAT_MAT3: case GL.FLOAT_MAT4:
@@ -128,7 +181,7 @@ function isSupportedFloatType(type: GLenum): boolean {
   }
 }
 
-function isSupportedIntType(type: GLenum): boolean {
+export function isSupportedIntType(type: GLenum): boolean {
   switch (type) {
     case GL.INT: case GL.INT_VEC2: case GL.INT_VEC3: case GL.INT_VEC4:
       return true;
@@ -414,9 +467,9 @@ export class Texture {
 
 // Uniforms
 
-type IntoSimpleUniform =
+export type IntoSimpleUniform =
   number | number[] | Vec2 | Vec3 | Vec4 | Matrix2 | Matrix3 | Matrix4;
-type IntoUniform = IntoSimpleUniform | Texture;
+export type IntoUniform = IntoSimpleUniform | Texture;
 type UniformValue = number[] | Texture;
 type IntoUniformWithValueTuple = [string, GLenum, IntoUniform, number?];
 

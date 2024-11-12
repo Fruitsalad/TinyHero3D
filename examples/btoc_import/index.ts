@@ -1,10 +1,7 @@
 import {
-  gl, initGraphics, Material, Shader, vec3,
-  Camera3D, SceneTree3D, aspectRatio, setResizeCallback,
-  loadGltfRoot, Node3D, loadOnlyScene, loadTexture
+  gl, aspectRatio, initGraphics, setResizeCallback, vec3,
+  Material, Shader, IntoUniform, BtocMeshReader, SceneTree3D, Node3D, Camera3D
 } from "render_engine/src/bundles/full";
-import * as GLTF from "@gltf-transform/core";
-import {KHRMaterialsUnlit} from "@gltf-transform/extensions";
 
 
 const coloredVertexSource = `
@@ -80,18 +77,18 @@ async function initScene() {
   camera.position = vec3(0, 0, 3);
   cameraController.addChild(camera);
 
-  const gltf = await loadGltfRoot("./shiba/scene.gltf", [KHRMaterialsUnlit]);
-  const scene = await loadOnlyScene(gltf, { loadMaterial });
+
+  const scene =
+    await BtocMeshReader.loadSceneFromURL("./scene.mesh", loadMaterial);
   tree.root.addChild(scene);
 }
 
-async function loadMaterial(material: GLTF.Material|null): Promise<Material> {
-  if (material === null)
-    return defaultMaterial;
-
-  const unlit = material.getExtension(KHRMaterialsUnlit.EXTENSION_NAME);
-  if (unlit) {
-    const tex = await loadTexture(material.getBaseColorTexture()!);
+async function loadMaterial(
+  shaderName: string,
+  uniforms: Map<string, IntoUniform>
+): Promise<Material> {
+  if (shaderName === "unlit") {
+    const tex = uniforms.get("color_texture")!;
     return Material.from(unlitShader, ["tex", tex]);
   }
 

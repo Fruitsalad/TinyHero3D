@@ -1,18 +1,10 @@
 import {
-  bindMachine,
-  Drawable,
-  EnvironmentUniforms,
-  InstanceUniforms,
-  Submesh,
-  Node,
-  SceneTree,
-  addDefaultUniformSources,
-  UniformSource, Mesh
+  GL, bindMachine, addDefaultUniformSources,
+  EnvironmentUniforms, InstanceUniforms, UniformSource,
+  SceneTree, Node, Drawable, Mesh
 } from "../graphics/graphics";
 import {Matrix3, Matrix4} from "../math/matrix";
 import {Vec3} from "../math/vec";
-
-const GL = WebGLRenderingContext;
 
 
 // SceneTree3D

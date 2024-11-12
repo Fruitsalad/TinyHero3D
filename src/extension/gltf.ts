@@ -1,25 +1,14 @@
 import {
-  Accessor,
-  Document,
-  GLTF,
-  Primitive,
-  WebIO,
-  Mesh as GltfMesh,
-  Material as GltfMaterial, Scene,
-  Node as GltfNode, Root, Extension,
-  Texture as GltfTexture
+  NodeIO, Root, Scene, Extension, Primitive, Accessor,
+  Mesh as GltfMesh, Material as GltfMaterial,
+  Node as GltfNode, Texture as GltfTexture, WebIO
 } from "@gltf-transform/core";
 import {MeshNode3D, Node3D} from "./3D.ts";
 import {
-  GlType,
-  IntoBufferObject,
-  Geometry,
-  VertexBuffer, Mesh, Submesh, Material, Texture
+  GL, GlType,
+  Mesh, Submesh, Geometry, VertexBuffer, IntoBufferObject, Material, Texture
 } from "../graphics/graphics.ts";
 import {Matrix4} from "../math/matrix.ts";
-
-
-const GL = WebGLRenderingContext;
 
 interface GltfLoadOptions {
   loadMaterial: (gltfMaterial: GltfMaterial|null) => Promise<Material>,
@@ -63,11 +52,15 @@ export async function loadGltfScene(
 }
 
 export async function loadGltfRoot(
-  gltfFile: string, extensions: (typeof Extension)[] = []
+  path: string, extensions: (typeof Extension)[] = []
 ): Promise<Root> {
-  const io = new WebIO();
+  const isNodeJS =
+    (typeof process !== 'undefined'
+      && process.versions !== null
+      && process.versions.node !== null);
+  const io = (isNodeJS ? new NodeIO() : new WebIO());
   io.registerExtensions(extensions);
-  const doc = await io.read(gltfFile);
+  const doc = await io.read(path);
   return doc.getRoot();
 }
 

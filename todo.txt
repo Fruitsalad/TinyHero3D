@@ -1,4 +1,10 @@
 x Core render engine
+x remove indices from vertex buffer
+x extend linear algebra stuff
+  x dot product and things like that
+  x invert matrix
+    x test matrix invert
+  - rotors
 - 3D unlit extension
   x Node3D transformation stuff
   x SceneTree3D
@@ -7,17 +13,17 @@ x Core render engine
       x test it with a mesh
     x loading materials
       x loading textures
-  - create a little extension
-    - proprietary mesh format
-- 3D half-lambertian extension?
-  - transform normals to world or view space
-x extend linear algebra stuff
-  x dot product and things like that
-  x invert matrix
-    x test matrix invert
-  - rotors
+
+- 3D unlit extension
+  - proprietary mesh format
+    x read/write
+    - gltf to btoc
+    - load btoc mesh
+  - turn it into an extension
+- Example
+
 - PBR?
   - loading PBR materials
 - 2D extension
-- Example
-x remove indices from vertex buffer
+- 3D half-lambertian extension?
+  - transform normals to world or view space
