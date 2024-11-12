@@ -1024,7 +1024,11 @@ export class BindMachine {
 
 // Drawables (Submesh, Mesh)
 
-export let clearColor = new Vec4(0,0,0,0);
+let clearColor = new Vec4(0,0,0,0);
+
+export function setClearColor(color: Vec4) {
+  clearColor = color;
+}
 
 export function startDrawing() {
   gl.clearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);

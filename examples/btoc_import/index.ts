@@ -1,7 +1,10 @@
 import {
   aspectRatio, vec3, initGraphics, setResizeCallback, initUnlitShaders,
-  startDrawing, finishDrawing, BtocMeshReader, SceneTree3D, Node3D, Camera3D
+  startDrawing, finishDrawing, setClearColor,
+  BtocMeshReader, SceneTree3D, Node3D, Camera3D
 } from "render_engine";
+import {} from "../../src/graphics/graphics";
+import {vec4} from "../../src/math/vec";
 
 
 const TARGET_FRAMERATE = 30;
@@ -13,6 +16,7 @@ await main();
 
 async function main() {
   // Initialize.
+  console.log("Starting initialization...");
   const canvas = document.body.querySelector("canvas")! as HTMLCanvasElement;
   initGraphics(canvas);
   initUnlitShaders();
@@ -21,8 +25,12 @@ async function main() {
   tree.setAspectRatio(aspectRatio);
   setResizeCallback(() => tree.setAspectRatio(aspectRatio));
 
-  // Set up the scene and start drawing!
+  // Set up the scene.
+  console.log("Setting up the scene...");
   await initScene();
+
+  // Start drawing!
+  console.log("Starting rendering...");
   loop();
 }
 
