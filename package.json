@@ -9,7 +9,7 @@
   "scripts": {
     "build": "rm -rf lib && rollup -c",
     "start": "rm -rf lib && rollup -c",
-    "btoc": "vite-node tools/btoc_tool.ts from_gltf ./examples/gltf_import/shiba/scene.gltf"
+    "btoc": "vite-node tools/btoc_tool.ts"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.1.0"

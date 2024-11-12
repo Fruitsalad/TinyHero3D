@@ -19,6 +19,7 @@ x 3D unlit extension
     x load btoc mesh
   x turn it into an extension
 - try it with bistro and that other scene with the castle
+  x bistro does not work because it's too big, out of memory :(
 - Example
 
 - optimization

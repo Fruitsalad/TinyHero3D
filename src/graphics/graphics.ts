@@ -7,9 +7,12 @@ import WebGLDebugUtils from "./external/webgl-debug";
 // defined, but we still need its constants. For that reason, we grab some of
 // the constants here. We really don't want to include this in browser builds
 // because it makes the minified version a lot bigger.
-export const GL = window.WebGLRenderingContext ??
+const hasWebGL = (typeof WebGLRenderingContext !== 'undefined');
+const isMinifiedBuild =
   // @ts-expect-error __IS_MINIFIED_BUILD__ is an environment variable.
-  (__IS_MINIFIED_BUILD__ ? ({} as WebGLRenderingContext) : {
+  (typeof __IS_MINIFIED_BUILD__ !== "undefined" && __IS_MINIFIED_BUILD__);
+export const GL = (hasWebGL ? WebGLRenderingContext :
+  (isMinifiedBuild ? ({} as WebGLRenderingContext) : {
   // Clear
   DEPTH_BUFFER_BIT: 0x00000100,
   STENCIL_BUFFER_BIT: 0x00000400,
@@ -68,10 +71,10 @@ export const GL = window.WebGLRenderingContext ??
   CLAMP_TO_EDGE: 0x812F,
   MIRRORED_REPEAT: 0x8370,
   RGBA: 0x1908
-});
+}));
 
 export let gl: WebGLRenderingContext;
-export let glVAO: OES_vertex_array_object;
+let glVAO: OES_vertex_array_object;
 export let canvas: HTMLCanvasElement;
 export let canvasSize: Vec2 = new Vec2(1, 1);
 export let aspectRatio: number = 1;
@@ -96,8 +99,7 @@ export function initGraphics(
 
   // Inject some debug stuff.
   if (isDebug) {
-    // @ts-expect-error  __IS_MINIFIED_BUILD__ is provided by Rollup's replacer
-    if (__IS_MINIFIED_BUILD__) {
+    if (isMinifiedBuild) {
       console.warn(
         "WebGL debug features are not supported in a minified build!"
       );
