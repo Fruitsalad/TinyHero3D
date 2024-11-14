@@ -48,7 +48,7 @@ export async function loadGltfScene(
   options: GltfLoadOptions,
   extensions: (typeof Extension)[] = []
 ): Promise<Node3D> {
-  return loadOnlyScene(await loadGltfRoot(gltfFile, extensions), options);
+  return loadMainScene(await loadGltfRoot(gltfFile, extensions), options);
 }
 
 export async function loadGltfRoot(
@@ -77,7 +77,7 @@ export function loadSpecificMesh(
   return loadMesh(mesh, options, cache);
 }
 
-export function loadOnlyScene(
+export function loadMainScene(
   root: Root, options: GltfLoadOptions
 ): Promise<Node3D> {
   options.normalizeBufferName ??= normalizeGltfBufferName;

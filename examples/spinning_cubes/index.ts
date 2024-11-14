@@ -1,61 +1,41 @@
 import {
-  gl, initGraphics, Material, Geometry, Submesh, Mesh, Shader, vec3,
-  Camera3D, MeshNode3D, SceneTree3D, Matrix4, aspectRatio, setResizeCallback
+  GL, initGraphics, aspectRatio, setResizeCallback,
+  initUnlitShaders, unlitFlatColorShader, finishDrawing, startDrawing, vec3,
+  Mesh, Submesh, Geometry, Material, SceneTree3D, MeshNode3D, Camera3D
 } from "render_engine";
 
 
-const vertexSource = `
-attribute vec3 position;
-attribute vec3 normal;
-attribute vec2 uv;
-
-uniform mat4 local_to_clip;
-
-varying vec2 _uv;
-varying vec3 _normal;
-
-void main() {
-  _uv = uv;
-  _normal = normal;
-  gl_Position = local_to_clip * vec4(position, 1.0);
-}
-`;
-const fragmentSource = `
-precision highp float;
-
-varying vec2 _uv;
-varying vec3 _normal;
-
-void main() {
-  float ndotl = max(dot(_normal, vec3(1,0,0)), 0.0);
-  vec3 dark_color = vec3(0.3, 0.1, 0.1);
-  vec3 bright_color = vec3(1, 0.4, 0.4);
-  vec3 color = dark_color + ndotl * (bright_color-dark_color);
-  gl_FragColor = vec4(color, 1);
-}
-`;
-
-
-
-const GL = WebGLRenderingContext;
 const targetFramerate = 30;
 let tree = new SceneTree3D();
-let cube;
-let cube2;
-let cube3;
+let cube: MeshNode3D;
+let cube2: MeshNode3D;
+let cube3: MeshNode3D;
 
-initGraphics($("canvas"));
-tree.setAspectRatio(aspectRatio);
-setResizeCallback(() => tree.setAspectRatio(aspectRatio));
-initScene();
-frame();
+main();
 
 
-function $(cssQuery) {
-  return document.body.querySelector(cssQuery);
+function main() {
+  // Initialize.
+  console.log("Starting initialization...");
+  const canvas = document.body.querySelector("canvas")! as HTMLCanvasElement;
+  initGraphics(canvas);
+  initUnlitShaders();
+
+  // Update the scene tree's aspect ratio when the canvas is resized.
+  tree.setAspectRatio(aspectRatio);
+  setResizeCallback(() => tree.setAspectRatio(aspectRatio));
+
+  // Set up the scene.
+  console.log("Setting up the scene...");
+  initScene();
+
+  // Start drawing!
+  console.log("Starting rendering...");
+  loop();
 }
 
 function initScene() {
+  // Create a cube mesh. In this example I provide the vertex data by hand.
   const i = 0.5;
   const o = -0.5;
   const cubeGeometry = Geometry.from_indexed(24,
@@ -75,6 +55,8 @@ function initScene() {
       o,i,o, o,i,i, i,i,i, i,i,o,  // Top face
       o,o,i, o,o,o, i,o,o, i,o,i   // Bottom face
     ]],
+    // It's worth noting that the unlit shader does not actually use normals or
+    // texture coordinates, but I already put them here. No point in removing it
     ["normal", GL.FLOAT_VEC3, [
       0,0,1,    0,0,1,    0,0,1,    0,0,1,    // North face
       1,0,0,    1,0,0,    1,0,0,    1,0,0,    // East face
@@ -92,14 +74,11 @@ function initScene() {
       0,0, 0,1, 1,1, 1,0,  // Bottom face
     ]]
   );
-  const shader = new Shader(vertexSource, fragmentSource);
-  const material = Material.from(shader);
+
+  const material = Material.from(unlitFlatColorShader, ["color", [.8,.3,.3]]);
   const cubeMesh = new Mesh([new Submesh(cubeGeometry, material)]);
 
-  const camera = Camera3D.Perspective();
-  camera.position = vec3(0, 0, 3);
-  tree.root.addChild(camera);
-
+  // Use the mesh to add some cubes to the scene.
   cube = MeshNode3D.from(cubeMesh, "cube");
   tree.root.addChild(cube);
 
@@ -113,28 +92,38 @@ function initScene() {
   cube3.position = vec3(1);
   cube3.scale = vec3(0.3);
   cube.addChild(cube3);
+
+  // Lastly add a camera to the scene.
+  const camera = Camera3D.Perspective();
+  camera.position = vec3(0, 0, 3);
+  tree.root.addChild(camera);
+}
+
+function loop() {
+  // Keep running `draw()` at the requested framerate.
+  draw();
+  setTimeout(() => requestAnimationFrame(loop), 1000/targetFramerate)
 }
 
 function draw() {
+  // Rotate the cubes each frame.
   const milliseconds = performance.now();
   const time = milliseconds/1000;
   const t = Math.sin(time)*0.5 + 0.5;
+
   cube.eulerAngles = vec3(time/2, time/5, time/9);
   cube.scale = vec3(0.8 + (1-t)*0.2);
-  const old = cube2.eulerAngles;
-  old.y = time/2;
+
+  const newRotation = cube2.eulerAngles;
+  newRotation.y = time/2;
   cube2.scale = vec3(0.5 + t*0.5);
-  cube2.eulerAngles = old;
+  cube2.eulerAngles = newRotation;
   cube2.position = vec3(t*5 - 2.5, 0.5, -3);
+
   cube3.eulerAngles = vec3(time/8, time/7, time/6);
 
-  gl.clearColor(1, 0, 0, 1);
-  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+  // Draw!
+  startDrawing();
   tree.draw();
-  gl.flush();
-}
-
-function frame() {
-  draw();
-  setTimeout(() => requestAnimationFrame(frame), 1000/targetFramerate)
+  finishDrawing();
 }

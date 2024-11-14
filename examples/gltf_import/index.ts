@@ -1,115 +1,91 @@
 import {
-  gl, initGraphics, Material, Shader, vec3,
-  Camera3D, SceneTree3D, aspectRatio, setResizeCallback,
-  loadGltfRoot, Node3D, loadOnlyScene, loadTexture
-} from "render_engine/src/bundles/full";
+  initGraphics, setResizeCallback, aspectRatio, vec3,
+  initUnlitShaders, unlitTexturedShader, unlitFlatColorShader,
+  startDrawing, finishDrawing, loadGltfRoot, loadMainScene, loadTexture,
+  SceneTree3D, Node3D, Camera3D, Material,
+} from "render_engine/lib/full/full.es";
 import * as GLTF from "@gltf-transform/core";
 import {KHRMaterialsUnlit} from "@gltf-transform/extensions";
 
 
-const coloredVertexSource = `
-attribute vec3 position;
-uniform mat4 local_to_clip;
 
-void main() {
-  gl_Position = local_to_clip * vec4(position, 1.0);
-}
-`;
-const coloredFragmentSource = `
-precision highp float;
-uniform vec3 color;
-
-void main() {
-  gl_FragColor = vec4(color, 1);
-}
-`;
-
-const unlitVertexSource = `
-attribute vec3 position;
-attribute vec2 texcoord;
-uniform mat4 local_to_clip;
-varying vec2 _texcoord;
-
-void main() {
-  _texcoord = texcoord;
-  gl_Position = local_to_clip * vec4(position, 1.0);
-}
-`;
-const unlitFragmentSource = `
-precision highp float;
-varying vec2 _texcoord;
-uniform sampler2D tex;
-
-void main() {
-  vec3 sample = texture2D(tex, _texcoord).rgb;
-  gl_FragColor = vec4(sample, 1);
-}
-`;
-
-
-
-const GL = WebGLRenderingContext;
-const targetFramerate = 30;
+const TARGET_FRAMERATE = 30;
 let tree = new SceneTree3D();
 let cameraController: Node3D;
+let defaultMaterial: Material;
 
-initGraphics($("canvas") as HTMLCanvasElement);
-tree.setAspectRatio(aspectRatio);
-setResizeCallback(() => tree.setAspectRatio(aspectRatio));
+await main();
 
-const PURPLE = vec3(0.47, 0.28, 0.64);
-const coloredShader = new Shader(coloredVertexSource, coloredFragmentSource);
-const unlitShader = new Shader(unlitVertexSource, unlitFragmentSource);
-const defaultMaterial = Material.from(coloredShader, ["color", PURPLE]);
 
-(async () => {
+async function main() {
+  // Initialize.
+  console.log("Starting initialization...");
+  const canvas = document.body.querySelector("canvas")! as HTMLCanvasElement;
+  initGraphics(canvas);
+  initUnlitShaders();
+
+  // Update the scene tree's aspect ratio when the canvas is resized.
+  tree.setAspectRatio(aspectRatio);
+  setResizeCallback(() => tree.setAspectRatio(aspectRatio));
+
+  // Set up the scene.
+  console.log("Setting up the scene...");
   await initScene();
-  frame();
-})();
 
-
-function $(cssQuery: string): Element {
-  return document.body.querySelector(cssQuery)!;
+  // Start drawing!
+  console.log("Starting rendering...");
+  loop();
 }
 
 async function initScene() {
+  // Create a default material, used for unsupported/unset GLTF materials.
+  const PURPLE = vec3(0.47, 0.28, 0.64);
+  defaultMaterial = Material.from(unlitFlatColorShader, ["color", PURPLE]);
+
+  // Load the 3D model and add it to the scene tree.
+  // It's important to note that you need to provide your own `loadMaterial`
+  // function!
+  const gltf = await loadGltfRoot("./shiba/scene.gltf", [KHRMaterialsUnlit]);
+  const scene = await loadMainScene(gltf, { loadMaterial });
+  tree.root.addChild(scene);
+
+  // Create a camera that orbits the model.
   cameraController = new Node3D("camera controller");
   tree.root.addChild(cameraController);
-
   const camera = Camera3D.Perspective();
   camera.position = vec3(0, 0, 3);
   cameraController.addChild(camera);
-
-  const gltf = await loadGltfRoot("./shiba/scene.gltf", [KHRMaterialsUnlit]);
-  const scene = await loadOnlyScene(gltf, { loadMaterial });
-  tree.root.addChild(scene);
 }
 
+// This function takes material data from the GLTF file and gives back the best
+// available material for this rendering engine.
 async function loadMaterial(material: GLTF.Material|null): Promise<Material> {
   if (material === null)
     return defaultMaterial;
 
   const unlit = material.getExtension(KHRMaterialsUnlit.EXTENSION_NAME);
   if (unlit) {
-    const tex = await loadTexture(material.getBaseColorTexture()!);
-    return Material.from(unlitShader, ["tex", tex]);
+    const texture = await loadTexture(material.getBaseColorTexture()!);
+    return Material.from(unlitTexturedShader, ["color_texture", texture]);
   }
 
   return defaultMaterial;
 }
 
+function loop() {
+  // Keep running `draw()` at the requested framerate.
+  draw();
+  setTimeout(() => requestAnimationFrame(loop), 1000/TARGET_FRAMERATE)
+}
+
 function draw() {
+  // Rotate the camera each frame.
   const time = performance.now()/1000;
   const t = Math.sin(time) * 0.5 + 0.5;
   cameraController.eulerAngles = vec3(t * 0.6, time/2, 0);
 
-  gl.clearColor(1, 0, 0, 1);
-  gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
+  // Draw!
+  startDrawing();
   tree.draw();
-  gl.flush();
-}
-
-function frame() {
-  draw();
-  setTimeout(() => requestAnimationFrame(frame), 1000/targetFramerate)
+  finishDrawing();
 }

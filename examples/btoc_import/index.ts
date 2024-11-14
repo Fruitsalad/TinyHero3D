@@ -1,10 +1,7 @@
 import {
   aspectRatio, vec3, initGraphics, setResizeCallback, initUnlitShaders,
-  startDrawing, finishDrawing, setClearColor,
-  BtocMeshReader, SceneTree3D, Node3D, Camera3D
+  startDrawing, finishDrawing, BtocMeshReader, SceneTree3D, Node3D, Camera3D
 } from "render_engine";
-import {} from "../../src/graphics/graphics";
-import {vec4} from "../../src/math/vec";
 
 
 const TARGET_FRAMERATE = 30;
