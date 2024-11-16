@@ -172,11 +172,24 @@ export class Matrix3 extends Matrix<N3> {
     return Matrix3.AxisAlignedRotation(2, radians);
   }
 
-  public static fromEulerAngles(euler: Vec3): Matrix3 {
+  public static Scale3D(scale: Vec3): Matrix3 {
+    const s = scale;
+    return new Matrix3([
+      s.x, 0,   0,
+      0,   s.y, 0,
+      0,   0,   s.z
+    ], false);
+  }
+
+  public static RotateScale3D(euler: Vec3, scale: Vec3): Matrix3 {
+    return Matrix3.Rotate3D(euler).mult(Matrix3.Scale3D(scale));
+  }
+
+  public static Rotate3D(euler: Vec3): Matrix3 {
     const yaw = Matrix3.AxisAlignedRotation(1, euler.y);
     const pitch = Matrix3.AxisAlignedRotation(0, euler.x);
     const roll = Matrix3.AxisAlignedRotation(2, euler.z);
-    return roll.mult(pitch.mult(yaw));
+    return roll.mult(yaw.mult(pitch));
   }
 
   public static AxisAlignedRotation(axis: number, radians: number): Matrix3 {
@@ -209,7 +222,7 @@ export class Matrix3 extends Matrix<N3> {
     return scale.mult(Math.sign(Matrix3.determinant(m)));
   }
 
-  // This uses the YXZ convention (that is: first yaw, then pitch, then roll).
+  // This uses the YXZ convention (that is: first pitch, yaw, then roll).
   public static deriveEulerAngles3D<U>(m: Matrix<U>): Vec3 {
     const m2 = m.clone();
     Matrix3.changeToRotationMatrix(m2);
@@ -218,43 +231,77 @@ export class Matrix3 extends Matrix<N3> {
 
   static _deriveEulerAngles3D<U>(m: Matrix<U>): Vec3 {
     // See https://www.eecs.qmul.ac.uk/~gslabaugh/publications/euler.pdf
-    // and also https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
-    // Note that we use the YXZ convention, so the matrix coordinates differ.
     let x, y, z;
 
-    const mSinX = m.get2(2,1);
     const E = 0.000001;
 
-    if (mSinX > 1-E) {
-      const mSinYplusZ = m.get2(1,0);
-      const mCosYplusZ = m.get2(1,2);
-      const yPlusZ = Math.atan2(-mSinYplusZ, -mCosYplusZ);
-      x = -Math.PI/2;
-      y = yPlusZ;
-      z = 0;  // Free to choose. We take zero for simplicity.
-    } else if (mSinX < -1+E) {
-      const sinYminusZ = m.get2(1,0);
-      const cosYminusZ = m.get2(1,2);
-      const yMinusZ = Math.atan2(sinYminusZ, cosYminusZ);
-      x = Math.PI/2;
-      y = yMinusZ;
+    // XYZ
+    const mSinY = m.get2(0,2);
+    if (mSinY > 1-E) {
+      const mSinXplusZ = m.get2(1,0);
+      const mCosXplusZ = m.get2(1,0);
+      const XplusZ = Math.atan2(-mSinXplusZ, -mCosXplusZ);
+      x = XplusZ;
+      y = Math.PI / 2;
+      z = 0;
+    } else if (mSinY < -1+E) {
+      const sinXminusZ = m.get2(1,0);
+      const cosXminusZ = m.get2(2,0);
+      const XminusZ = Math.atan2(sinXminusZ, cosXminusZ);
+      x = XminusZ;
+      y = -Math.PI/2;
       z = 0;
     } else {
-      x = -Math.asin(mSinX);
-      const cosX = Math.cos(x);
+      y = -Math.asin(mSinY);
+      const cosY = Math.cos(y);
 
-      const cosX_cosY = m.get2(2,2);
-      const cosX_sinY = m.get2(2,0);
-      const cosY = cosX_cosY / cosX;
-      const sinY = cosX_sinY / cosX;
-      y = Math.atan2(sinY, cosY);
+      const sinXcosY = m.get2(1,2);
+      const cosXcosY = m.get2(2,2);
+      const sinX = sinXcosY / cosY;
+      const cosX = cosXcosY / cosY;
+      x = Math.atan2(sinX, cosX);
 
-      const cosX_sinZ = m.get2(0,1);
-      const cosX_cosZ = m.get2(1,1);
-      const cosZ = cosX_cosZ / cosX;
-      const sinZ = cosX_sinZ / cosX;
+      const cosYsinZ = m.get2(0,1);
+      const cosYcosZ = m.get2(0,0);
+      const sinZ = cosYsinZ / cosY;
+      const cosZ = cosYcosZ / cosY;
       z = Math.atan2(sinZ, cosZ);
     }
+
+    // Below is YXZ (I used the wrong rotation convention at first, by mistake)
+    // Deriving this stuff is too much work so I can't be bothered to delete it.
+
+    // const mSinX = m.get2(2,1);
+    // if (mSinX > 1-E) {
+    //   const mSinYplusZ = m.get2(1,0);
+    //   const mCosYplusZ = m.get2(1,2);
+    //   const yPlusZ = Math.atan2(-mSinYplusZ, -mCosYplusZ);
+    //   x = -Math.PI/2;
+    //   y = yPlusZ;
+    //   z = 0;  // Free to choose. We take zero for simplicity.
+    // } else if (mSinX < -1+E) {
+    //   const sinYminusZ = m.get2(1,0);
+    //   const cosYminusZ = m.get2(1,2);
+    //   const yMinusZ = Math.atan2(sinYminusZ, cosYminusZ);
+    //   x = Math.PI/2;
+    //   y = yMinusZ;
+    //   z = 0;
+    // } else {
+    //   x = -Math.asin(mSinX);
+    //   const cosX = Math.cos(x);
+    //
+    //   const cosX_cosY = m.get2(2,2);
+    //   const cosX_sinY = m.get2(2,0);
+    //   const cosY = cosX_cosY / cosX;
+    //   const sinY = cosX_sinY / cosX;
+    //   y = Math.atan2(sinY, cosY);
+    //
+    //   const cosX_sinZ = m.get2(0,1);
+    //   const cosX_cosZ = m.get2(1,1);
+    //   const cosZ = cosX_cosZ / cosX;
+    //   const sinZ = cosX_sinZ / cosX;
+    //   z = Math.atan2(sinZ, cosZ);
+    // }
 
     return new Vec3(x,y,z);
   }
@@ -286,30 +333,35 @@ export class Matrix3 extends Matrix<N3> {
       m.scalarMultInPlace(-1);
   }
 
-  public static getInverse<U>(m: Matrix<U>): Matrix3 {
+  public static invert<U>(m: Matrix<U>): Matrix3 {
     // See https://www.geeksforgeeks.org/inverse-of-3x3-matrix/
     // Note that this specific function is also meant to be safe with a Matrix4
     const adjoint = Matrix3.getAdjointMatrix(m);
     const determinant =
       adjoint.get2(0,0)*m.get2(0,0) +
-      adjoint.get2(1,0)*m.get2(1,0) +
-      adjoint.get2(2,0)*m.get2(2,0);
+      adjoint.get2(0,1)*m.get2(1,0) +
+      adjoint.get2(0,2)*m.get2(2,0);
     const inverseDeterminant = 1/determinant;
     console.assert(
       Number.isFinite(inverseDeterminant),
       "Matrix3.invert was run on a matrix that doesn't have an inverse!"
     );
+    // const adjoint = Matrix3.getAdjointMatrix(m);
     adjoint.scalarMultInPlace(inverseDeterminant);
     return adjoint;
   }
 
   public static getAdjointMatrix<U>(m: Matrix<U>): Matrix3 {
+    // The adjoint matrix is the transpose of the cofactor matrix, and the
+    // cofactor matrix of a 3x3 matrix is basically a matrix where every cell
+    // contains the determinant of the 2x2 matrix that you'd get if you removed
+    // the cell's row and column, but some cells are inverted.
     // Note that this function is also meant to be safe with a Matrix4
     const f = Matrix3.cofactor;
     return new Matrix3([
-      f(m,1,1, 2,2), f(m,1,2, 2,0), f(m,1,0, 2,1),
-      f(m,2,1, 0,2), f(m,2,2, 0,0), f(m,2,0, 0,1),
-      f(m,0,1, 1,2), f(m,0,2, 1,0), f(m,0,0, 1,1)
+      f(m,1,1, 2,2), f(m,2,1, 0,2), f(m,0,1, 1,2),
+      f(m,1,2, 2,0), f(m,2,2, 0,0), f(m,0,2, 1,0),
+      f(m,1,0, 2,1), f(m,2,0, 0,1), f(m,0,0, 1,1)
     ], false);
   }
 
@@ -394,7 +446,7 @@ export class Matrix4 extends Matrix<N4> {
   }
 
   public static Rotate3D(euler: Vec3): Matrix4 {
-    const rotation = Matrix3.fromEulerAngles(euler);
+    const rotation = Matrix3.Rotate3D(euler);
     const result = Matrix4.identity.clone();
     result.elems.overwrite_partially(rotation.elems);
     return result;
@@ -434,10 +486,11 @@ export class Matrix4 extends Matrix<N4> {
     m.set2(2, 2, s.z);
   }
 
-  public static getInverse3DTransform(m: Matrix4): Matrix4 {
+  public static affineInvert(m: Matrix4): Matrix4 {
     console.assert(m.get2(3,3) === 1);
-    const inverse_mat3 = Matrix3.getInverse(m);
-    const inverse_translation = Matrix4.getTranslation(m).mult(-1);
+    const inverse_mat3 = Matrix3.invert(m);
+    const inverse_translation =
+      inverse_mat3.transform(Matrix4.getTranslation(m).mult(-1));
     const result = Matrix4.Translate3D(inverse_translation);
     result.elems.overwrite_partially(inverse_mat3.elems);
     return result;

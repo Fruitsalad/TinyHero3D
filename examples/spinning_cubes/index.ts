@@ -10,6 +10,7 @@ let tree = new SceneTree3D();
 let cube: MeshNode3D;
 let cube2: MeshNode3D;
 let cube3: MeshNode3D;
+let cube4: MeshNode3D;
 
 main();
 
@@ -93,6 +94,9 @@ function initScene() {
   cube3.scale = vec3(0.3);
   cube.addChild(cube3);
 
+  cube4 = MeshNode3D.from(cubeMesh, "cube4");
+  cube3.addChild(cube4);
+
   // Lastly add a camera to the scene.
   const camera = Camera3D.Perspective();
   camera.position = vec3(0, 0, 3);
@@ -121,6 +125,7 @@ function draw() {
   cube2.position = vec3(t*5 - 2.5, 0.5, -3);
 
   cube3.eulerAngles = vec3(time/8, time/7, time/6);
+  cube4.globalPosition = vec3(-2.5, 0, 0);
 
   // Draw!
   startDrawing();

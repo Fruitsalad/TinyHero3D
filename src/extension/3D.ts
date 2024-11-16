@@ -177,7 +177,7 @@ export class Node3D extends Node {
   _setGlobalTransform(matrix: Matrix4) {
     const parentTF =
       this.tryGetParentNode3D()?._globalTransform ?? Matrix4.identity;
-    const inverseParentTF = Matrix4.getInverse3DTransform(parentTF);
+    const inverseParentTF = Matrix4.affineInvert(parentTF);
     this.transform = inverseParentTF.mult(matrix);
   }
 
@@ -185,7 +185,7 @@ export class Node3D extends Node {
     // Update the global transform.
     const parent = this.tryGetParentNode3D();
     this._globalTransform =
-      (parent ? this._transform.mult(parent._globalTransform) : this._transform.clone());
+      (parent ? parent._globalTransform.mult(this._transform) : this._transform.clone());
 
     // Let this node's children update their global transform.
     for (const child of this.children)
@@ -304,7 +304,7 @@ export class Camera3D extends Node3D {
     // Set the uniforms.
     const tree = (this.tree as SceneTree3D);
     console.assert(typeof tree.setCameraMatrices === "function");
-    const globalToCamera = Matrix4.getInverse3DTransform(this.globalTransform);
+    const globalToCamera = Matrix4.affineInvert(this.globalTransform);
     tree.setCameraMatrices(globalToCamera, this.cameraToClip);
     tree.camera3D = this;  // Also store the camera.
   }

@@ -54,7 +54,7 @@ function draw() {
   // Rotate the camera.
   const time = performance.now()/1000;
   const t = Math.sin(time) * 0.5 + 0.5;
-  cameraController.eulerAngles = vec3(t * 0.6, time/2, 0);
+  cameraController.eulerAngles = vec3(-0.6*t, time/2, 0);
 
   // Draw the scene.
   startDrawing();

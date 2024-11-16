@@ -86,11 +86,11 @@ export class Vec<T> {
     return a.join(b, Math.max);
   }
 
-  public square_length(): number {
+  public squareLength(): number {
     return this.elems.reduce((sum, n) => sum + n*n, 0);
   }
   public length(): number {
-    return Math.sqrt(this.square_length());
+    return Math.sqrt(this.squareLength());
   }
 
   public normalized(): Vec<T> {
