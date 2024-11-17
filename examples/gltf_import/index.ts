@@ -3,7 +3,7 @@ import {
   initUnlitShaders, unlitTexturedShader, unlitFlatColorShader,
   startDrawing, finishDrawing, loadGltfRoot, loadMainScene, loadTexture,
   SceneTree3D, Node3D, Camera3D, Material,
-} from "render_engine/lib/full/full.es";
+} from "render_engine";
 import * as GLTF from "@gltf-transform/core";
 import {KHRMaterialsUnlit} from "@gltf-transform/extensions";
 

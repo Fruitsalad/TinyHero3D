@@ -26,9 +26,10 @@ x use unlit3D in examples
   x btoc_import
   x spinning_cubes
   x gltf_import
-- Example
+x full.js does not provide export "Camera3D"
+- Production example
 
-- full.js does not provide export "Camera3D"
+- remove `public`
 
 - optimization
   - BatchNode3D

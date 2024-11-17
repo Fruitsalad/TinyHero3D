@@ -10,17 +10,20 @@ import {Vec3} from "../math/vec";
 // SceneTree3D
 
 export class SceneTree3D implements SceneTree, Drawable {
-  public aspectRatio: number = 1;
-  public uniforms: EnvironmentUniforms = new EnvironmentUniforms();
-  public root: Node = new Node3D("root");
+  aspectRatio: number = 1;
+  uniforms: EnvironmentUniforms = new EnvironmentUniforms();
+  root: Node = new Node3D("root");
+  extensions: any = {};
 
-  public globalToCamera: Matrix4 = Matrix4.identity;
-  public cameraToClip: Matrix4 = Matrix4.identity;
-  public globalToClip: Matrix4 = Matrix4.identity;
-  public camera3D?: Camera3D;
+  globalToCamera: Matrix4 = Matrix4.identity;
+  cameraToClip: Matrix4 = Matrix4.identity;
+  globalToClip: Matrix4 = Matrix4.identity;
+  camera3D?: Camera3D;
+
+  beforeDrawing: (() => void)[] = [];
 
 
-  public constructor() {
+  constructor() {
     this.root.tree = this;
     addDefaultUniformSources(
       ["local_to_global", UniformSource.INSTANCE],
@@ -34,7 +37,7 @@ export class SceneTree3D implements SceneTree, Drawable {
     this.uniforms.set("global_to_clip", GL.FLOAT_MAT4, this.globalToClip);
   }
 
-  public setCameraMatrices(globalToCamera: Matrix4, cameraToClip: Matrix4) {
+  setCameraMatrices(globalToCamera: Matrix4, cameraToClip: Matrix4) {
     this.globalToCamera = globalToCamera;
     this.cameraToClip = cameraToClip;
     this.globalToClip = this.cameraToClip.mult(this.globalToCamera);
@@ -43,12 +46,14 @@ export class SceneTree3D implements SceneTree, Drawable {
     this.uniforms.set("global_to_clip", GL.FLOAT_MAT4, this.globalToClip);
   }
 
-  public setAspectRatio(aspectRatio: number) {
+  setAspectRatio(aspectRatio: number) {
     this.aspectRatio = aspectRatio;
     this.camera3D?.updateCameraUniforms();
   }
 
-  public draw() {
+  draw() {
+    for (const event of this.beforeDrawing)
+      event();
     bindMachine.setEnvironment(this.uniforms);
     this.root.recursively(node => {  // @ts-expect-error
       if (typeof(node.draw) === "function")  // @ts-expect-error

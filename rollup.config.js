@@ -15,7 +15,7 @@ function create_normal_build(name, input_file) {
       {
         name,
         format: "umd",
-        file: `lib/${name}/${name}.js`,
+        file: `lib/${name}/${name}.umd.js`,
         sourcemap: true
       },
       {
@@ -47,7 +47,7 @@ function create_minified_build(name, input_file) {
       {
         name,
         format: "umd",
-        file: `lib/${name}/${name}.min.js`
+        file: `lib/${name}/${name}.umd.min.js`
       },
       {
         name,
@@ -83,7 +83,7 @@ function create_typescript_declaration_files(name, declaration_root) {
   return {
     input: declaration_root,
     output: [
-      { file: `lib/${name}/${name}.d.ts`, format: "es" },
+      { file: `lib/${name}/${name}.umd.d.ts`, format: "es" },
       { file: `lib/${name}/${name}.es.d.ts`, format: "es" }
     ],
     plugins: [dts()]

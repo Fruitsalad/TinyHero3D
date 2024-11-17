@@ -1,8 +1,17 @@
 import {
   GL, initGraphics, aspectRatio, setResizeCallback,
-  initUnlitShaders, unlitFlatColorShader, finishDrawing, startDrawing, vec3,
+  finishDrawing, startDrawing, vec3,
   Mesh, Submesh, Geometry, Material, SceneTree3D, MeshNode3D, Camera3D
-} from "render_engine";
+} from "render_engine/src/bundles/unlit3D";
+import {
+  initPhong3D,
+  phongFlatColorShader
+} from "../../src/extension/phong3D.ts";
+import {
+  DirectionalLight3D,
+  Light3DExtension
+} from "../../src/extension/light3D.ts";
+
 
 
 const targetFramerate = 30;
@@ -20,7 +29,8 @@ function main() {
   console.log("Starting initialization...");
   const canvas = document.body.querySelector("canvas")! as HTMLCanvasElement;
   initGraphics(canvas);
-  initUnlitShaders();
+  Light3DExtension.init(tree);
+  initPhong3D();
 
   // Update the scene tree's aspect ratio when the canvas is resized.
   tree.setAspectRatio(aspectRatio);
@@ -76,7 +86,7 @@ function initScene() {
     ]]
   );
 
-  const material = Material.from(unlitFlatColorShader, ["color", [.8,.3,.3]]);
+  const material = Material.from(phongFlatColorShader, ["color", [.8,.3,.3]]);
   const cubeMesh = new Mesh([new Submesh(cubeGeometry, material)]);
 
   // Use the mesh to add some cubes to the scene.
@@ -96,6 +106,9 @@ function initScene() {
 
   cube4 = MeshNode3D.from(cubeMesh, "cube4");
   cube3.addChild(cube4);
+
+  const light = new DirectionalLight3D();
+  cube4.addChild(light);
 
   // Lastly add a camera to the scene.
   const camera = Camera3D.Perspective();

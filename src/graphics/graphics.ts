@@ -485,8 +485,13 @@ export class Texture {
 export type IntoSimpleUniform =
   number | number[] | Vec2 | Vec3 | Vec4 | Matrix2 | Matrix3 | Matrix4;
 export type IntoUniform = IntoSimpleUniform | Texture;
-type UniformValue = number[] | Texture;
-type IntoUniformWithValueTuple = [string, GLenum, IntoUniform, number?];
+export type UniformValue = number[] | Texture;
+export type UniformTypeAndValueTuple = [GLenum, IntoUniform, number?];
+export type IntoNamedUniformTuple = [string, ...UniformTypeAndValueTuple];
+export type IntoUniformArray = IntoUniformObject[];
+export type IntoUniformStruct = { [key: string]: IntoUniformObject }
+export type IntoUniformObject =
+  UniformTypeAndValueTuple|IntoUniformArray|IntoUniformStruct;
 
 export enum UniformSource { MATERIAL, ENVIRONMENT, INSTANCE }
 
@@ -568,11 +573,11 @@ class UniformMap {
   public uniforms: Map<string, UniformWithValue>;
   public hasChangedSinceLastBound = false;
 
-  public constructor() {
+  constructor() {
     this.uniforms = new Map<string, UniformWithValue>();
   }
 
-  public static from(tuples: IntoUniformWithValueTuple[]): UniformMap {
+  static from(tuples: IntoNamedUniformTuple[]): UniformMap {
     const map = new UniformMap();
     for (const tuple of tuples)
       map.setFromTuple(tuple);
@@ -582,7 +587,7 @@ class UniformMap {
 
   // Getting & setting uniforms.
 
-  public tryGet(uniform: Uniform): UniformValue | undefined {
+  tryGet(uniform: Uniform): UniformValue | undefined {
     const found = this.uniforms.get(uniform.name);
     if (found === undefined)
       return undefined;
@@ -591,15 +596,35 @@ class UniformMap {
     return found.value;
   }
 
-  public set(...uniform: IntoUniformWithValueTuple) {
-    this.setFromObject(UniformWithValue(...uniform));
+  set(
+    name: string, ...uniform: UniformTypeAndValueTuple|[IntoUniformObject]
+  ) {
+    if (typeof uniform[0] === "number")
+      this.setFromTuple([name, ...(uniform as UniformTypeAndValueTuple)]);
+    else this._setStruct(name, uniform[0]);
   }
 
-  public setFromTuple(uniform: IntoUniformWithValueTuple) {
+  private _setStruct(name: string, uniform: IntoUniformObject) {
+    const isArray = Array.isArray(uniform);
+    const isTuple = (isArray && typeof uniform[0] === "number");
+
+    // Simple value
+    if (isTuple)
+      this.setFromTuple([name, ...(uniform as UniformTypeAndValueTuple)]);
+    // Array
+    else if (isArray)
+      for (let i = 0; i < uniform.length; i++)
+        this._setStruct(`${name}[${i}]`, (uniform as IntoUniformArray)[i]);
+    // Struct
+    else for (const [key, value] of Object.entries(uniform))
+        this._setStruct(`${name}.${key}`, value);
+  }
+
+  setFromTuple(uniform: IntoNamedUniformTuple) {
     this.setFromObject(UniformWithValue(...uniform));
   }
   
-  public setFromObject(uniform: UniformWithValue) {
+  setFromObject(uniform: UniformWithValue) {
     this.uniforms.set(uniform.name, uniform);
     this.hasChangedSinceLastBound = true;
   }
@@ -1086,7 +1111,11 @@ export class Mesh implements Drawable {
 export interface SceneTree {
   aspectRatio: number,
   uniforms: EnvironmentUniforms,
-  root: Node
+  root: Node,
+
+  // `extra` is an object that stores additional data, for example lights are
+  // typically in extra.lights3D.
+  extensions: any
 }
 
 export class Node {

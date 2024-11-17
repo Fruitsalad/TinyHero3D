@@ -2,7 +2,7 @@ import {Material, Shader} from "../graphics/graphics.ts";
 import {registerShaderType, setFallbackMaterial} from "./btoc/btoc_mesh.ts";
 import {vec3} from "../math/vec.ts";
 
-// Shader exports (Note that you need to call initUnlitShaders first!)
+// Shader exports (Note that you need to call initUnlit3D first!)
 export let unlitFlatColorShader: Shader;
 export let unlitVertexColorShader: Shader;
 export let unlitTexturedShader: Shader;
@@ -72,9 +72,7 @@ void main() {
 }
 `;
 
-const PURPLE = vec3(0.47, 0.28, 0.64);
-
-export function initUnlitShaders() {
+export function initUnlit3D() {
   unlitTexturedShader =
     new Shader(texturedVertexSource, texturedFragmentSource);
   unlitFlatColorShader =
@@ -82,6 +80,7 @@ export function initUnlitShaders() {
   unlitVertexColorShader =
     new Shader(vertexColorVertexSource, vertexColorFragmentSource);
 
+  const PURPLE = vec3(0.47, 0.28, 0.64);
   setFallbackMaterial(Material.from(unlitFlatColorShader, ["color", PURPLE]));
   registerShaderType("unlit", args => {
     if (args.has("color_texture"))
