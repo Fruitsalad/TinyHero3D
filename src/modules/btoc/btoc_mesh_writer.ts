@@ -1,8 +1,6 @@
 import {BtocFile} from "./btoc.ts";
 import {BtocMeshReader, NodeData, SceneData} from "./btoc_mesh.ts";
-import {
-  isSupportedFloatType, isSupportedIntType
-} from "../../graphics/graphics.ts";
+import {isSupportedFloatType, isSupportedIntType} from "../core.ts";
 
 
 export class BtocMeshWriter {

@@ -1,7 +1,7 @@
-import {Vec2, Vec3, Vec4} from "../math/vec";
-import {Matrix, Matrix2, Matrix3, Matrix4} from "../math/matrix";
+import {Vec2, Vec3, Vec4} from "../math/vec.ts";
+import {Matrix, Matrix2, Matrix3, Matrix4} from "../math/matrix.ts";
 // @ts-expect-error  WebGL debug does not support Typescript, but it's fine.
-import WebGLDebugUtils from "./external/webgl-debug";
+import WebGLDebugUtils from "../external/webgl-debug";
 
 // In a NodeJS setting (like for the tool scripts) WebGLRenderingContext is not
 // defined, but we still need its constants. For that reason, we grab some of

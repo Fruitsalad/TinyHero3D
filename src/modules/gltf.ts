@@ -7,7 +7,7 @@ import {MeshNode3D, Node3D} from "./3D.ts";
 import {
   GL, GlType,
   Mesh, Submesh, Geometry, VertexBuffer, IntoBufferObject, Material, Texture
-} from "../graphics/graphics.ts";
+} from "./core.ts";
 import {Matrix4} from "../math/matrix.ts";
 
 interface GltfLoadOptions {

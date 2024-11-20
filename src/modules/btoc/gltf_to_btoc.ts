@@ -5,7 +5,7 @@ import {
   Material as GltfMaterial,
   Texture as GltfTexture
 } from "@gltf-transform/core";
-import {GL} from "../../graphics/graphics.ts"
+import {GL} from "../core.ts"
 import {Matrix4} from "../../math/matrix.ts";
 import {getCachedOrCompute} from "../../util/cache.ts";
 import {loadGltfRoot, normalizeGltfBufferName} from "../gltf.ts";

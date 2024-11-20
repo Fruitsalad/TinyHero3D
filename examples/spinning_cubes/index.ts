@@ -1,17 +1,9 @@
 import {
   GL, initGraphics, aspectRatio, setResizeCallback,
-  finishDrawing, startDrawing, vec3,
-  Mesh, Submesh, Geometry, Material, SceneTree3D, MeshNode3D, Camera3D
-} from "render_engine/src/bundles/unlit3D";
-import {
-  initPhong3D,
-  phongFlatColorShader
-} from "../../src/extension/lambertian3D.ts";
-import {
-  DirectionalLight3D,
-  Light3DExtension, PointLight3D
-} from "../../src/extension/light3D.ts";
-
+  initPhong3D, phongFlatColorShader, finishDrawing, startDrawing, vec3,
+  Mesh, Submesh, Geometry, Material, SceneTree3D, MeshNode3D, Camera3D,
+  DirectionalLight3D, Light3DExtension, PointLight3D
+} from "render_engine";
 
 
 const targetFramerate = 30;
@@ -50,6 +42,7 @@ function initScene() {
   const i = 0.5;
   const o = -0.5;
   const cubeGeometry = Geometry.from_indexed(24,
+    // The indices: Every three numbers connects three vertices with a triangle
     [
       0,1,2, 0,2,3,
       4,5,6, 4,6,7,
@@ -58,6 +51,7 @@ function initScene() {
       16,17,18, 16,18,19,
       20,21,22, 20,22,23
     ],
+    // Vertex positions.
     ["position", GL.FLOAT_VEC3, [
       i,o,i, i,i,i, o,i,i, o,o,i,  // North face
       i,o,o, i,o,i, i,i,i, i,i,o,  // East face
@@ -66,8 +60,7 @@ function initScene() {
       o,i,o, o,i,i, i,i,i, i,i,o,  // Top face
       o,o,i, o,o,o, i,o,o, i,o,i   // Bottom face
     ]],
-    // It's worth noting that the unlit shader does not actually use normals or
-    // texture coordinates, but I already put them here. No point in removing it
+    // Vertex normals (this is a lighting thing)
     ["normal", GL.FLOAT_VEC3, [
       0,0,1,    0,0,1,    0,0,1,    0,0,1,    // North face
       1,0,0,    1,0,0,    1,0,0,    1,0,0,    // East face
@@ -76,7 +69,10 @@ function initScene() {
       0,1,0,    0,1,0,    0,1,0,    0,1,0,    // Top face
       0,-1,0,   0,-1,0,   0,-1,0,   0,-1,0,   // Bottom face
     ]],
-    ["uv", GL.FLOAT_VEC2, [
+    // Texture coordinates
+    // It's worth noting that the current shader does not actually use
+    // texture coordinates, but I already put them here. No point in removing it
+    ["texcoord", GL.FLOAT_VEC2, [
       0,0, 0,1, 1,1, 1,0,  // North face
       0,0, 0,1, 1,1, 1,0,  // East face
       0,0, 0,1, 1,1, 1,0,  // South face

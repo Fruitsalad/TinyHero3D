@@ -1,4 +1,4 @@
-import {Material, Shader} from "../graphics/graphics.ts";
+import {Material, Shader} from "./core.ts";
 import {registerShaderType, setFallbackMaterial} from "./btoc/btoc_mesh.ts";
 import {vec3} from "../math/vec.ts";
 

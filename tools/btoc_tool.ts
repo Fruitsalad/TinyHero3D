@@ -6,8 +6,8 @@ import {
   Material as GltfMaterial
 } from "@gltf-transform/core";
 import {KHRMaterialsUnlit} from "@gltf-transform/extensions";
-import {MaterialData} from "../src/extension/btoc/btoc_mesh";
-import {convertGltfFileToBtoc} from "../src/extension/btoc/gltf_to_btoc";
+import {MaterialData} from "../src/modules/btoc/btoc_mesh";
+import {convertGltfFileToBtoc} from "../src/modules/btoc/gltf_to_btoc";
 
 program
   .name("btoc_tool")

@@ -1,11 +1,8 @@
 import {Node3D, SceneTree3D} from "./3D.ts";
 import {vec3, vec4} from "../math/vec.ts";
 import {
-  EnvironmentUniforms,
-  GL,
-  SceneTree,
-  UniformTypeAndValueTuple
-} from "../graphics/graphics.ts";
+  EnvironmentUniforms, GL, SceneTree, UniformTypeAndValueTuple
+} from "./core.ts";
 import {Matrix3, Matrix4} from "../math/matrix.ts";
 
 

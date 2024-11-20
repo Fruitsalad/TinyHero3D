@@ -2,7 +2,7 @@ import {
   GL, bindMachine, addDefaultUniformSources,
   EnvironmentUniforms, InstanceUniforms, UniformSource,
   SceneTree, Node, Drawable, Mesh
-} from "../graphics/graphics";
+} from "./core.ts";
 import {Matrix3, Matrix4} from "../math/matrix";
 import {Vec3} from "../math/vec";
 
@@ -37,9 +37,7 @@ export class SceneTree3D implements SceneTree, Drawable {
 
       // Normal matrices (for correctly transforming normal vectors):
       // (You only really need these for meshes with a non-uniform scale)
-      ["normal_local_to_global", UniformSource.INSTANCE],
-      // ["normal_global_to_camera", UniformSource.ENVIRONMENT],
-      // ["normal_camera_to_clip", UniformSource.ENVIRONMENT]
+      ["normal_local_to_global", UniformSource.INSTANCE]
     );
     this.uniforms.set("global_to_camera", GL.FLOAT_MAT4, this.globalToCamera);
     this.uniforms.set("camera_to_clip", GL.FLOAT_MAT4, this.cameraToClip);

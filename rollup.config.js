@@ -104,5 +104,6 @@ function bundle(name) {
 export default [
   ...bundle("full"),
   ...bundle("core"),
-  ...bundle("unlit3D")
+  ...bundle("unlit3D"),
+  ...bundle("lambertian3D")
 ]

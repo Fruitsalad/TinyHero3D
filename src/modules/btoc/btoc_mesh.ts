@@ -5,7 +5,7 @@ import {
   GlType, isSupportedFloatType, isSupportedIntType,
   Material, Texture, Mesh, Submesh, Geometry, VertexBuffer,
   IntoBufferObject, IntoUniform
-} from "../../graphics/graphics.ts";
+} from "../core.ts";
 import {getCachedOrCompute, getCachedOrComputeAsync} from "../../util/cache.ts";
 
 

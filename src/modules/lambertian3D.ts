@@ -1,9 +1,6 @@
 import {
-  addDefaultUniformSources,
-  Material,
-  Shader,
-  UniformSource
-} from "../graphics/graphics.ts";
+  addDefaultUniformSources, Material, Shader, UniformSource
+} from "./core.ts";
 import {registerShaderType, setFallbackMaterial} from "./btoc/btoc_mesh.ts";
 import {vec3} from "../math/vec.ts";
 

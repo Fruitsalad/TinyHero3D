@@ -1,5 +1,5 @@
 import {
-  aspectRatio, vec3, initGraphics, setResizeCallback, initUnlitShaders,
+  aspectRatio, vec3, initGraphics, setResizeCallback, initUnlit3D,
   startDrawing, finishDrawing, BtocMeshReader, SceneTree3D, Node3D, Camera3D
 } from "render_engine";
 
@@ -16,7 +16,7 @@ async function main() {
   console.log("Starting initialization...");
   const canvas = document.body.querySelector("canvas")! as HTMLCanvasElement;
   initGraphics(canvas);
-  initUnlitShaders();
+  initUnlit3D();
 
   // Update the scene tree's aspect ratio when the canvas is resized.
   tree.setAspectRatio(aspectRatio);
