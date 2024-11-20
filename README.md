@@ -5,14 +5,14 @@
 - Less than 12 kB (minified and GZipped)
 - Entirely WebGL1: Works on almost any device, even cheap old ones!
 - Zero external dependencies. Only a browser with WebGL is required!
-- Library-style API, not game-engine-style — you're in control of the main loop.
+- Library-style API, not game-engine-style — you stay in control of the main loop.
 - Easy-to-use scene trees, similar to Godot game engine.
 - Lambertian lighting.
-- Uses its own binary mesh format. It comes with a command line tool for converting GLTF files into `.mesh` files.
+- For compactness, this library uses its own binary mesh format. It comes with a command line tool for converting GLTF files into `.mesh` files.
 - Custom GLSL shaders & uniforms are 100% supported. For uniforms, you can either set uniforms for the whole scene, for a material or for a specific scene tree node.
-- Supports using non-standard vertex attributes (please do note that WebGL only supports attributes with `int` or `float` elements)
+- Supports using non-standard vertex attributes (please do note that WebGL1 only supports attributes with `int` or `float` elements)
 - Features a small matrix & vector math library, designed to be easy to work with.
-- The unminified core API features lots & lots of assertions, and goes out of its way to help you find usage errors and explain what went wrong clearly.
+- The unminified core API goes out of its way to help you find usage errors and explain what went wrong clearly.
 
 A rendering engine this tiny helps to make 3D hero elements much more viable!
 As long as you make sure your mesh doesn't have too many triangles,
@@ -55,6 +55,9 @@ npm run examples
 Once built, the bundles can be found in the `/lib/` subdirectory (which appears
 after building).
 For more information on bundles, see the section below.
+
+
+![A video of a spinning skull](./doc/skull.gif)
 
 
 ### Bundles

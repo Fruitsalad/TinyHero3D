@@ -5,25 +5,25 @@ import {registerShaderType, setFallbackMaterial} from "./btoc/btoc_mesh.ts";
 import {vec3} from "../math/vec.ts";
 
 // Shader exports (Note that you need to call initPhong3D first!)
-export let phongFlatColorShader: Shader;
-export let phongTexturedShader: Shader;
+export let lambertianFlatColorShader: Shader;
+export let lambertianTexturedShader: Shader;
 
 
 // Initializing
 
-export function initPhong3D(
+export function initLambertian3D(
   pointLightsMax: number = 4,
   directionalLightsMax: number = 1
 ) {
   // Flat color
-  phongFlatColorShader = createPhongSurfaceShader(
+  lambertianFlatColorShader = createLambertianSurfaceShader(
     "void surface() {}",
     `
     uniform vec3 color;
     void surface() { SURFACE_COLOR = color; }
     `, pointLightsMax, directionalLightsMax
   );
-  phongTexturedShader = createPhongSurfaceShader(`
+  lambertianTexturedShader = createLambertianSurfaceShader(`
     attribute vec2 texcoord;
     varying vec2 _texcoord;
     void surface() { _texcoord = texcoord; }
@@ -34,13 +34,12 @@ export function initPhong3D(
     `, pointLightsMax, directionalLightsMax
   );
 
-  // TODO!!! TEMPORARY
   const PURPLE = vec3(0.47, 0.28, 0.64);
-  setFallbackMaterial(Material.from(phongFlatColorShader, ["color", PURPLE]));
-  registerShaderType("unlit", args => {
+  setFallbackMaterial(Material.from(lambertianFlatColorShader, ["color", PURPLE]));
+  registerShaderType("lit", args => {
     if (args.has("color_texture"))
-      return Material.from(phongTexturedShader, ...args);
-    return Material.from(phongFlatColorShader, ...args);
+      return Material.from(lambertianTexturedShader, ...args);
+    return Material.from(lambertianFlatColorShader, ...args);
   });
 
   // Add the default sources
@@ -63,7 +62,7 @@ export function initPhong3D(
 
 // Surface shaders
 
-function createPhongSurfaceShader(
+function createLambertianSurfaceShader(
   vertexSurfaceShader: string,
   fragmentSurfaceShader: string,
   pointLightsMax: number = 4,
@@ -122,7 +121,8 @@ function createPhongSurfaceShader(
       
       for (int i = 0; i < ${directionalLightsMax}; i++) {
         float lightness = dot(_normal, -directionalLights[i].direction);
-        color += SURFACE_COLOR * lightness * directionalLights[i].color;
+        vec3 c = SURFACE_COLOR * lightness * directionalLights[i].color;
+        color += clamp(c, vec3(0), vec3(1));
       }
       for (int i = 0; i < ${pointLightsMax}; i++) {
         vec3 difference = pointLights[i].position - _position;

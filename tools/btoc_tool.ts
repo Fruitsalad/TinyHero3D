@@ -50,7 +50,7 @@ function loadMaterial(
 
   if (gltf.getExtension(KHRMaterialsUnlit.EXTENSION_NAME))
     return {shaderName: "unlit", uniforms};
-  return {shaderName: "default", uniforms};
+  return {shaderName: "lit", uniforms};
 }
 
 function toUserFriendlyFileSize(size: number) {

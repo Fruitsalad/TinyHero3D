@@ -1,6 +1,6 @@
 import {
-  GL, initGraphics, aspectRatio, setResizeCallback,
-  initPhong3D, phongFlatColorShader, finishDrawing, startDrawing, vec3,
+  GL, initGraphics, aspectRatio, setResizeCallback, vec3,
+  initLambertian3D, lambertianFlatColorShader, finishDrawing, startDrawing,
   Mesh, Submesh, Geometry, Material, SceneTree3D, MeshNode3D, Camera3D,
   DirectionalLight3D, Light3DExtension, PointLight3D
 } from "render_engine";
@@ -22,7 +22,7 @@ function main() {
   const canvas = document.body.querySelector("canvas")! as HTMLCanvasElement;
   initGraphics(canvas);
   Light3DExtension.init(tree);
-  initPhong3D();
+  initLambertian3D();
 
   // Update the scene tree's aspect ratio when the canvas is resized.
   tree.setAspectRatio(aspectRatio);
@@ -82,7 +82,8 @@ function initScene() {
     ]]
   );
 
-  const material = Material.from(phongFlatColorShader, ["color", [.5,.5,.5]]);
+  const material =
+    Material.from(lambertianFlatColorShader, ["color", [.5,.5,.5]]);
   const cubeMesh = new Mesh([new Submesh(cubeGeometry, material)]);
 
   // Use the mesh to add some cubes to the scene.
@@ -127,16 +128,16 @@ function draw() {
   // Rotate the cubes each frame.
   const milliseconds = performance.now();
   const time = milliseconds/1000;
-  const t = Math.sin(time)*0.5 + 0.5;
+  const wiggle = Math.sin(time)*0.5 + 0.5;
 
   cube.eulerAngles = vec3(time/2, time/5, time/9);
-  cube.scale = vec3(0.8 + (1-t)*0.2);
+  cube.scale = vec3(0.8 + (1-wiggle)*0.2);
 
   const newRotation = cube2.eulerAngles;
   newRotation.y = time/2;
-  cube2.scale = vec3(0.5 + t*0.5);
+  cube2.scale = vec3(0.5 + wiggle*0.5);
   cube2.eulerAngles = newRotation;
-  cube2.position = vec3(t*5 - 2.5, 0.5, -3);
+  cube2.position = vec3(wiggle*5 - 2.5, 0.5, -3);
 
   cube3.eulerAngles = vec3(time/8, time/7, time/6);
   cube4.globalPosition = vec3(-2.5, 0, 0);
