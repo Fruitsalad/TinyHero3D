@@ -27,9 +27,23 @@ x use unlit3D in examples
   x spinning_cubes
   x gltf_import
 x full.js does not provide export "Camera3D"
-- Production example
+x lambertian3D
+  x transform normals into world or view space
+     This was apparently way easier than I thought since you don't need to
+     preserve orthogonality
+  x directional light
+  - point light
+  - spotlight
+- Rename stuff
+  - graphics.ts -> core.ts
+  - extensions -> modules
+- Example scenes
+  - building with cars
+  - spinning phone probably
 
-- remove `public`
+- improve keyword usage
+  - remove `public` keyword (it's the default apparently)
+  - insert `_` prefix for all private functions and attributes
 
 - optimization
   - BatchNode3D
@@ -37,6 +51,8 @@ x full.js does not provide export "Camera3D"
     - also depth sorting probably
   - instancing?
 - Multiple canvases (most importantly change `aspectRatio`)
+  Note that sharing a context is not supported in WebGL 1, so this would have to
+  be library multi-instancing (i.e. a hassle)
 
 - PBR?
   - loading PBR materials

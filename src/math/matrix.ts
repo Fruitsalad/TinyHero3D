@@ -351,6 +351,10 @@ export class Matrix3 extends Matrix<N3> {
     return adjoint;
   }
 
+  public static getTransformForNormals<U>(m: Matrix<U>): Matrix3 {
+    return Matrix3.invert(m.transposed());
+  }
+
   public static getAdjointMatrix<U>(m: Matrix<U>): Matrix3 {
     // The adjoint matrix is the transpose of the cofactor matrix, and the
     // cofactor matrix of a 3x3 matrix is basically a matrix where every cell

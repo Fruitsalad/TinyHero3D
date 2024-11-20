@@ -6,7 +6,7 @@ import {
 import {
   initPhong3D,
   phongFlatColorShader
-} from "../../src/extension/phong3D.ts";
+} from "../../src/extension/lambertian3D.ts";
 import {
   DirectionalLight3D,
   Light3DExtension
@@ -108,7 +108,7 @@ function initScene() {
   cube3.addChild(cube4);
 
   const light = new DirectionalLight3D();
-  cube4.addChild(light);
+  tree.root.addChild(light);
 
   // Lastly add a camera to the scene.
   const camera = Camera3D.Perspective();

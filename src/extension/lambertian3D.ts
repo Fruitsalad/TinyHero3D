@@ -91,13 +91,16 @@ function createPhongSurfaceShader(
   const vertexSource = `
     attribute vec3 position;
     attribute vec3 normal;
+    uniform mat4 local_to_global;
     uniform mat4 local_to_clip;
+    varying vec3 _position;
     varying vec3 _normal;
     
     ${vertexSurfaceShader}
     
     void main() {
-      _normal = normal;
+      _normal = normalize((local_to_global * vec4(normal, 0.0)).xyz);
+      _position = (local_to_global * vec4(position, 1.0)).xyz;
       gl_Position = local_to_clip * vec4(position, 1.0);
       surface();
     }
@@ -110,8 +113,9 @@ function createPhongSurfaceShader(
       vec3 color;
     };
     
-    varying vec3 _normal;
     uniform DirectionalLight directionalLights[${directionalLightsMax}];
+    varying vec3 _position;
+    varying vec3 _normal;
     
     vec3 SURFACE_COLOR;  // This should be set by the surface shader.
     
