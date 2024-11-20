@@ -568,7 +568,7 @@ export function addDefaultUniformSources(
 
 // Uniform maps
 
-// This stores shared uniforms such as transforms (and lighting if we had it).
+// This stores shared uniforms such as transforms.
 class UniformMap {
   public uniforms: Map<string, UniformWithValue>;
   public hasChangedSinceLastBound = false;
@@ -1051,12 +1051,12 @@ export class BindMachine {
 
 let clearColor = new Vec4(0,0,0,0);
 
-export function setClearColor(color: Vec4) {
+export function setBackgroundColor(color: Vec4) {
   clearColor = color;
+  gl.clearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 }
 
 export function startDrawing() {
-  gl.clearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
   gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 }
 
