@@ -32,8 +32,8 @@ x lambertian3D
      This was apparently way easier than I thought since you don't need to
      preserve orthogonality
   x directional light
-  - point light
-  - spotlight
+  x point light
+  / spotlight
 - Rename stuff
   - graphics.ts -> core.ts
   - extensions -> modules

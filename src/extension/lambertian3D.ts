@@ -16,7 +16,6 @@ export let phongTexturedShader: Shader;
 
 export function initPhong3D(
   pointLightsMax: number = 4,
-  spotLightsMax: number = 4,
   directionalLightsMax: number = 1
 ) {
   // Flat color
@@ -25,7 +24,7 @@ export function initPhong3D(
     `
     uniform vec3 color;
     void surface() { SURFACE_COLOR = color; }
-    `, pointLightsMax, spotLightsMax, directionalLightsMax
+    `, pointLightsMax, directionalLightsMax
   );
   phongTexturedShader = createPhongSurfaceShader(`
     attribute vec2 texcoord;
@@ -35,7 +34,7 @@ export function initPhong3D(
     varying vec2 _texcoord;
     uniform sampler2D color_texture;
     void surface() { SURFACE_COLOR = texture2D(color_texture, _texcoord).rgb; }
-    `, pointLightsMax, spotLightsMax, directionalLightsMax
+    `, pointLightsMax, directionalLightsMax
   );
 
   // TODO!!! TEMPORARY
@@ -56,14 +55,6 @@ export function initPhong3D(
       [`pointLights[${i}].color`, UniformSource.ENVIRONMENT]
     );
   }
-  for (let i = 0; i < spotLightsMax; i++) {
-    addDefaultUniformSources(
-      [`spotLights[${i}].position`, UniformSource.ENVIRONMENT],
-      [`spotLights[${i}].direction`, UniformSource.ENVIRONMENT],
-      [`spotLights[${i}].radius`, UniformSource.ENVIRONMENT],
-      [`spotLights[${i}].color`, UniformSource.ENVIRONMENT]
-    );
-  }
   for (let i = 0; i < directionalLightsMax; i++) {
     addDefaultUniformSources(
       [`directionalLights[${i}].direction`, UniformSource.ENVIRONMENT],
@@ -79,19 +70,15 @@ function createPhongSurfaceShader(
   vertexSurfaceShader: string,
   fragmentSurfaceShader: string,
   pointLightsMax: number = 4,
-  spotLightsMax: number = 4,
-  directionalLightsMax: number = 1
+  directionalLightsMax: number = 1,
+  supportNonUniformScaling = false  // This matters for surface normals
 ) {
-  // struct PointLight {
-  //   vec3 position;
-  //   vec3 color;
-  //   float radius;
-  // }
-
   const vertexSource = `
     attribute vec3 position;
     attribute vec3 normal;
     uniform mat4 local_to_global;
+    ${supportNonUniformScaling ? "uniform mat3 normal_local_to_global;" : ""}
+    
     uniform mat4 local_to_clip;
     varying vec3 _position;
     varying vec3 _normal;
@@ -99,9 +86,13 @@ function createPhongSurfaceShader(
     ${vertexSurfaceShader}
     
     void main() {
-      _normal = normalize((local_to_global * vec4(normal, 0.0)).xyz);
-      _position = (local_to_global * vec4(position, 1.0)).xyz;
       gl_Position = local_to_clip * vec4(position, 1.0);
+      _position = (local_to_global * vec4(position, 1.0)).xyz;
+      ` +
+      (supportNonUniformScaling ?
+       "_normal = normalize(normal_local_to_global * normal);" :
+       "_normal = normalize((local_to_global * vec4(normal, 0.0)).xyz);")
+      + `
       surface();
     }
     `;
@@ -112,9 +103,16 @@ function createPhongSurfaceShader(
       vec3 direction;
       vec3 color;
     };
+    struct PointLight {
+      vec3 position;
+      vec3 color;
+      float radius;
+    };
     
     uniform DirectionalLight directionalLights[${directionalLightsMax}];
-    varying vec3 _position;
+    uniform PointLight pointLights[${pointLightsMax}];
+    
+    varying vec3 _position;  // In world space
     varying vec3 _normal;
     
     vec3 SURFACE_COLOR;  // This should be set by the surface shader.
@@ -127,7 +125,16 @@ function createPhongSurfaceShader(
       
       for (int i = 0; i < ${directionalLightsMax}; i++) {
         float lightness = dot(_normal, -directionalLights[i].direction);
-        color += SURFACE_COLOR * lightness;
+        color += SURFACE_COLOR * lightness * directionalLights[i].color;
+      }
+      for (int i = 0; i < ${pointLightsMax}; i++) {
+        vec3 difference = pointLights[i].position - _position;
+        vec3 direction = normalize(difference);
+        float distance = length(difference);
+        float attenuation = smoothstep(pointLights[i].radius, 0.0, distance);
+        float lightness = dot(_normal, direction);
+        vec3 c = SURFACE_COLOR * lightness * attenuation * pointLights[i].color;
+        color += clamp(c, vec3(0), vec3(1));
       }
       
       gl_FragColor = vec4(color, 1);

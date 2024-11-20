@@ -26,11 +26,20 @@ export class SceneTree3D implements SceneTree, Drawable {
   constructor() {
     this.root.tree = this;
     addDefaultUniformSources(
+      // The most important matrices:
       ["local_to_global", UniformSource.INSTANCE],
-      ["local_to_clip", UniformSource.INSTANCE],
       ["global_to_camera", UniformSource.ENVIRONMENT],
       ["camera_to_clip", UniformSource.ENVIRONMENT],
-      ["global_to_clip", UniformSource.ENVIRONMENT]
+
+      // Premultiplied matrices (for efficiency):
+      ["local_to_clip", UniformSource.INSTANCE],
+      ["global_to_clip", UniformSource.ENVIRONMENT],
+
+      // Normal matrices (for correctly transforming normal vectors):
+      // (You only really need these for meshes with a non-uniform scale)
+      ["normal_local_to_global", UniformSource.INSTANCE],
+      // ["normal_global_to_camera", UniformSource.ENVIRONMENT],
+      // ["normal_camera_to_clip", UniformSource.ENVIRONMENT]
     );
     this.uniforms.set("global_to_camera", GL.FLOAT_MAT4, this.globalToCamera);
     this.uniforms.set("camera_to_clip", GL.FLOAT_MAT4, this.cameraToClip);
@@ -234,8 +243,12 @@ export class MeshNode3D extends Node3D implements Drawable {
     const tree = this.tree! as SceneTree3D;
     const localToGlobal = this._globalTransform;
     const localToClip = tree.globalToClip.mult(localToGlobal);
+    const normalLocalToGlobal = Matrix3.getTransformForNormals(localToGlobal);
     this.uniforms.set("local_to_global", GL.FLOAT_MAT4, localToGlobal);
     this.uniforms.set("local_to_clip", GL.FLOAT_MAT4, localToClip);
+    this.uniforms.set(
+      "normal_local_to_global", GL.FLOAT_MAT3, normalLocalToGlobal
+    );
     bindMachine.setInstanceUniforms(this.uniforms);
     this.mesh.draw();
   }

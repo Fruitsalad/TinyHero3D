@@ -13,7 +13,6 @@ import {Matrix3, Matrix4} from "../math/matrix.ts";
 
 export class Light3DExtension {
   pointLights: PointLight3D[] = [];
-  spotLights: SpotLight3D[] = [];
   directionalLights: DirectionalLight3D[] = [];
 
   private constructor() {}
@@ -114,16 +113,6 @@ export class PointLight3D extends Light3D {
   _unhook(lights: Light3DExtension) {
     const index = lights.pointLights.findIndex(light => light === this)!;
     lights.pointLights.splice(index, 1);
-  }
-}
-
-export class SpotLight3D extends Light3D {
-  _hook(lights: Light3DExtension) {
-    lights.spotLights.push(this);
-  }
-  _unhook(lights: Light3DExtension) {
-    const index = lights.spotLights.findIndex(light => light === this)!;
-    lights.spotLights.splice(index, 1);
   }
 }
 

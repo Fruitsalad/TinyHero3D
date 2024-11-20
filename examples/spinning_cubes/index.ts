@@ -9,7 +9,7 @@ import {
 } from "../../src/extension/lambertian3D.ts";
 import {
   DirectionalLight3D,
-  Light3DExtension
+  Light3DExtension, PointLight3D
 } from "../../src/extension/light3D.ts";
 
 
@@ -86,7 +86,7 @@ function initScene() {
     ]]
   );
 
-  const material = Material.from(phongFlatColorShader, ["color", [.8,.3,.3]]);
+  const material = Material.from(phongFlatColorShader, ["color", [.5,.5,.5]]);
   const cubeMesh = new Mesh([new Submesh(cubeGeometry, material)]);
 
   // Use the mesh to add some cubes to the scene.
@@ -109,6 +109,11 @@ function initScene() {
 
   const light = new DirectionalLight3D();
   tree.root.addChild(light);
+
+  const pointLight = new PointLight3D();
+  pointLight.color = vec3(.8, .4, .4);
+  pointLight.position = vec3(-2, 1, -1);
+  tree.root.addChild(pointLight);
 
   // Lastly add a camera to the scene.
   const camera = Camera3D.Perspective();
