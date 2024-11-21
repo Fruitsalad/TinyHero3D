@@ -4,7 +4,7 @@ import {
 import {registerShaderType, setFallbackMaterial} from "./btoc/btoc_mesh.ts";
 import {vec3} from "../math/vec.ts";
 
-// Shader exports (Note that you need to call initPhong3D first!)
+// Shader exports (Note that you need to call initLambertian3D first!)
 export let lambertianFlatColorShader: Shader;
 export let lambertianTexturedShader: Shader;
 
