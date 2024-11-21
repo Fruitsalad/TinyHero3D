@@ -3,7 +3,7 @@ import {
   startDrawing, finishDrawing, setBackgroundColor,
   BtocMeshReader, SceneTree3D, Node3D, Camera3D,
   DirectionalLight3D, Light3DExtension
-} from "render_engine";
+} from "tinyhero3d";
 import {PointLight3D} from "../../src/modules/light3D";
 
 

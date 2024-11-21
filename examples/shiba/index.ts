@@ -2,7 +2,7 @@ import {
   aspectRatio, vec3, vec4, initGraphics, setResizeCallback, initUnlit3D,
   startDrawing, finishDrawing, setBackgroundColor,
   BtocMeshReader, SceneTree3D, Node3D, Camera3D
-} from "render_engine";
+} from "tinyhero3d";
 
 
 const TARGET_FRAMERATE = 30;

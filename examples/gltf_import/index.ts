@@ -3,7 +3,7 @@ import {
   initUnlit3D, unlitTexturedShader, unlitFlatColorShader,
   startDrawing, finishDrawing, loadGltfRoot, loadMainScene, loadTexture,
   SceneTree3D, Node3D, Camera3D, Material,
-} from "render_engine";
+} from "tinyhero3d";
 import * as GLTF from "@gltf-transform/core";
 import {KHRMaterialsUnlit} from "@gltf-transform/extensions";
 

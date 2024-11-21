@@ -3,7 +3,7 @@ import {
   initLambertian3D, lambertianFlatColorShader, finishDrawing, startDrawing,
   Mesh, Submesh, Geometry, Material, SceneTree3D, MeshNode3D, Camera3D,
   DirectionalLight3D, Light3DExtension, PointLight3D
-} from "render_engine";
+} from "tinyhero3d";
 
 
 const targetFramerate = 30;

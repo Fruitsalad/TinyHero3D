@@ -1,5 +1,5 @@
 {
-  "name": "render_engine",
+  "name": "tinyhero3d",
   "description": "A tiny WebGL rendering engine",
   "private": true,
   "version": "0.1.0",

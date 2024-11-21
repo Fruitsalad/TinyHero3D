@@ -1,5 +1,5 @@
 {
-  "name": "render_engine_examples",
+  "name": "tinyhero3d_examples",
   "description": "Examples",
   "private": true,
   "version": "0.1.0",
@@ -8,7 +8,7 @@
     "start": "vite"
   },
   "dependencies": {
-    "render_engine": "file:../",
+    "tinyhero3d": "file:../",
     "@gltf-transform/core": "^4.1.0",
     "@gltf-transform/extensions": "^4.1.0"
   },
