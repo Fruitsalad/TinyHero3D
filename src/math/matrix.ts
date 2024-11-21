@@ -205,9 +205,6 @@ export class Matrix3 extends Matrix<N3> {
     return result;
   }
 
-
-  // These have to be static because otherwise Matrix<N3> != Matrix3
-
   public static setTranslation2D(m: Matrix3, tl: Vec2) {
     m.set2(2, 0, tl.x);
     m.set2(2, 1, tl.y);
@@ -222,7 +219,7 @@ export class Matrix3 extends Matrix<N3> {
     return scale.mult(Math.sign(Matrix3.determinant(m)));
   }
 
-  // This uses the YXZ convention (that is: first pitch, yaw, then roll).
+  // This uses the XYZ convention (that is: first pitch, yaw, then roll).
   public static deriveEulerAngles3D<U>(m: Matrix<U>): Vec3 {
     const m2 = m.clone();
     Matrix3.changeToRotationMatrix(m2);
