@@ -1193,7 +1193,7 @@ export class Node {
     callback: (node: Node) => boolean|void
   ): boolean {
     for (const child of this.children)
-      if (callback(this))
+      if (callback(child))
         return true;
     for (const child of this.children)
       if (child.recursivelyBreadthFirst(callback))
